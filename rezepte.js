@@ -6,7 +6,7 @@
   var U = window.HPUI, HP = window.HP;
   if (!U) return;
   const { html, docId, Icon, Av, Sheet, DeleteButton, KindPick, PeoplePick, Empty, useBusy } = U;
-  const { useState, useMemo } = U.P;
+  const { useState, useMemo, useRef, useEffect } = U.P;
 
   /* ---------- helpers ---------- */
   const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -162,6 +162,15 @@
     const ideas = useMemo(() => poolOf(own || []).filter(r => r.idea), [own]);
     return html`
       <${U.TabHead} emoji="🍳" title="Rezepte">${own && own.length > 0 && html`<span class="tab-head-n">${own.length === 1 ? "1 Rezept" : own.length + " Rezepte"}</span>`}<//>
+      <section class="panel import">
+        <div class="panel-head"><h2 class="sec-h">Rezept übernehmen</h2></div>
+        <div class="quick-grid">
+          <button type="button" class="qa" onClick=${() => ctx.open({ t: "import", mode: "link" })}><span class="emo" aria-hidden="true">🔗</span>Aus Link</button>
+          <button type="button" class="qa" onClick=${() => ctx.open({ t: "import", mode: "image" })}><span class="emo" aria-hidden="true">📷</span>Screenshot</button>
+          <button type="button" class="qa" onClick=${() => ctx.open({ t: "import", mode: "text" })}><span class="emo" aria-hidden="true">📋</span>Aus Text</button>
+        </div>
+        <p>Link von Fooby, Migusto, Betty Bossi, Swissmilk oder Chefkoch einfügen, einen Screenshot wählen oder Text einfügen: Daraus entstehen Rezept, Einkaufsliste und Kochmodus.</p>
+      </section>
       <${IdeaCard} ctx=${ctx} />
       <${WeekPlan} ctx=${ctx} />
       <div class="search">
@@ -195,7 +204,7 @@
   }
 
   /* ---------- one recipe, to cook from ---------- */
-  function RecipeView({ ctx, r, plan, onClose }) {
+  function RecipeView({ ctx, r, plan, fresh, onClose }) {
     const { act, say, who, open } = ctx;
     const [serves, setServes] = useState(r.serves);
     const [skip, setSkip] = useState(() => { const s = {}; r.ingr.forEach((l, i) => { if (HP.isStaple(l)) s[i] = true; }); return s; });
@@ -205,6 +214,7 @@
     const planEv = plan ? (ctx.data.events || []).find(e => e.id === plan) : null;
     const cook = planEv ? planEv.who.map(who).filter(m => !m.gone)[0] : null;
     const take = () => run(async () => { const id = await adopt(ctx, r); if (id) open({ t: "recipe", id }); });
+    const store = HP.storeOf(ctx.home.store);
     const cooked = () => run(async () => {
       if (await act.patch("recipes", r.id, { last: HP.today(), n: (r.n || 0) + 1, up: Date.now() })) say("En Guete! 😋 «" + r.title + "» ist als gekocht notiert.");
     });
@@ -221,6 +231,11 @@
             ${r.tags.length > 0 && html`<div class="chips">${r.tags.map(t => html`<span key=${t} class="chip static mini"><span class="emo" aria-hidden="true">${HP.recipeTag(t).emoji}</span>${HP.recipeTag(t).label}</span>`)}</div>`}
           </div>
         </div>
+        ${fresh && html`
+          <div class="note fresh"><span class="emo" aria-hidden="true">✨</span><div class="stack">
+            <p><strong>Gespeichert.</strong> Was jetzt? Zutaten auf die Einkaufsliste${store ? " für " + store.label : ""}, einplanen oder gleich loskochen.</p>
+          </div></div>`}
+        ${r.steps.length > 0 && html`<button type="button" class="btn primary block cook-go" onClick=${() => open({ t: "cook", id: r.id, serves })}><span class="emo" aria-hidden="true">👩‍🍳</span>Kochmodus starten</button>`}
         ${planEv && html`
           <div class="note"><${Icon} n="check" /><div class="stack">
             <p><strong>Eingeplant: ${HP.longDay(planEv.date)}</strong>${cook ? ", " + cook.name + " kocht" : ""}.</p>
@@ -246,7 +261,7 @@
               </label>`)}
             </div>
             <p class="hint">Angekreuzte Zutaten kommen auf die Einkaufsliste. Grundvorrat wie Salz und Öl ist schon abgewählt; nimm weg, was ihr sonst noch habt.</p>
-            <div><button type="button" class="btn primary" disabled=${busy || !chosen.length} onClick=${() => run(() => toShopping(ctx, r, chosen))}><${Icon} n="cart" s=${18} />Auf die Einkaufsliste (${chosen.length})</button></div>
+            <div><button type="button" class="btn primary" disabled=${busy || !chosen.length} onClick=${() => run(() => toShopping(ctx, r, chosen))}><${Icon} n="cart" s=${18} />Auf die Einkaufsliste${store ? " für " + store.label : ""} (${chosen.length})</button></div>
           </div>`}
         ${r.steps.length > 0 && html`
           <div class="field">
@@ -271,11 +286,11 @@
 
   /* ---------- one recipe, to edit ---------- */
   const TIMES = [15, 30, 45, 60, 90];
-  function RecipeForm({ ctx, r, onClose, onSaved }) {
+  function RecipeForm({ ctx, r, draft, source, how, onClose, onSaved }) {
     const { act, say, meId } = ctx;
-    const isNew = !r;
-    const [d, setD] = useState(() => r
-      ? { title: r.title, emoji: r.emoji, cat: r.cat, tags: r.tags.slice(), time: r.time ? String(r.time) : "", serves: r.serves, ingr: r.ingr.join("\n"), steps: r.steps.join("\n"), link: r.link, note: r.note }
+    const isNew = !r, from = r || draft;
+    const [d, setD] = useState(() => from
+      ? { title: from.title, emoji: from.emoji, cat: from.cat, tags: from.tags.slice(), time: from.time ? String(from.time) : "", serves: from.serves, ingr: from.ingr.join("\n"), steps: from.steps.join("\n"), link: from.link, note: from.note }
       : { title: "", emoji: "teller", cat: "main", tags: [], time: "", serves: 4, ingr: "", steps: "", link: "", note: "" });
     const [err, setErr] = useState(null);
     const [busy, run] = useBusy();
@@ -290,12 +305,18 @@
       const fields = { title: title.slice(0, 80), emoji: d.emoji, cat: d.cat, tags: d.tags, time: time || 0, serves: d.serves, ingr: lines(d.ingr, 60, 120), steps: lines(d.steps, 40, 600), link, note: d.note.slice(0, 2000), up: Date.now() };
       if (isNew) {
         const id = docId("r");
-        if (await act.save("recipes", Object.assign({ id, fav: false, last: "", n: 0, by: meId || null, ts: Date.now() }, fields))) { say("Rezept gespeichert."); onSaved(id); }
+        if (await act.save("recipes", Object.assign({ id, fav: false, last: "", n: 0, by: meId || null, ts: Date.now() }, fields))) { say(draft ? "Rezept übernommen. Jetzt einkaufen oder gleich kochen." : "Rezept gespeichert."); onSaved(id, !!draft); }
       } else if (await act.patch("recipes", r.id, fields)) { say("Änderung gespeichert."); onSaved(r.id); }
     });
     const del = () => run(async () => { if (await act.remove("recipes", r.id)) { onClose(true); say("Rezept gelöscht."); } });
     return html`
-      <${Sheet} title=${isNew ? "Neues Rezept" : "Rezept bearbeiten"} onClose=${() => onClose(false)} error=${err} action=${html`<button type="button" class="btn primary small" disabled=${busy} onClick=${save}>Speichern</button>`}>
+      <${Sheet} title=${draft ? "Rezept prüfen" : isNew ? "Neues Rezept" : "Rezept bearbeiten"} onClose=${() => onClose(false)} error=${err} action=${html`<button type="button" class="btn primary small" disabled=${busy} onClick=${save}>Speichern</button>`}>
+        ${draft && html`
+          <div class="note"><${Icon} n="check" /><div class="stack">
+            <p><strong>${how === "schema" ? "Rezept von der Seite übernommen." : how === "ocr" ? "Rezept aus dem Screenshot gelesen." : "Rezept aus dem Text erkannt."}</strong> ${how === "schema" ? "Kurz prüfen und speichern." : "Prüf Zutaten und Schritte kurz: Die Erkennung ist gut, aber nicht unfehlbar."}</p>
+            ${!draft.ingr.length && html`<p>Zutaten wurden keine gefunden. Trag sie unten ein, je eine pro Zeile.</p>`}
+          </div></div>`}
+        ${source && html`<details class="raw"><summary>Erkannten Text anzeigen</summary><pre class="code">${source}</pre></details>`}
         <div class="field">
           <label for="hp-rc-title">Name</label>
           <input id="hp-rc-title" class="input" maxlength="80" autocomplete="off" placeholder="z. B. Omas Gemüsesuppe" value=${d.title} onInput=${e => set({ title: e.target.value })} data-autofocus=${isNew ? "" : null} />
@@ -402,5 +423,106 @@
       <//>`;
   }
 
-  Object.assign(U, { Recipes, RecipeView, RecipeForm, MealSheet, findRecipe, dailyIdea, recipeMeta: metaOf });
+  /* ---------- taking a recipe over: from a link, screenshots or text ---------- */
+  const MODES_IMPORT = [["link", "Link", "🔗"], ["image", "Screenshot", "📷"], ["text", "Text", "📋"]];
+  const IMPORT_FAIL = {
+    nourl: "Darin steckt kein Link. Füg die ganze Adresse ein, sie beginnt mit https://.",
+    fetch: "Die Seite liess sich nicht laden, auch nicht über die Lesedienste. Mach einen Screenshot vom Rezept oder kopier den Text, und übernimm es von dort.",
+    norecipe: "Auf dieser Seite war kein Rezept zu erkennen. Mach einen Screenshot vom Rezept oder kopier den Text, und übernimm es von dort.",
+    "ocr-load": "Die Texterkennung liess sich nicht laden. Prüf die Verbindung: Beim ersten Mal braucht sie Netz, danach nicht mehr.",
+    ocr: "Der Text auf dem Bild liess sich nicht lesen. Versuch einen schärferen Screenshot, oder kopier den Text."
+  };
+  function ImportSheet({ ctx, mode: mode0, shared, onClose, onDraft }) {
+    const Imp = window.HPImport;
+    const sharedUrl = shared ? Imp.normUrl((shared.url || "") + " " + (shared.text || "") + " " + (shared.title || "")) : "";
+    const [mode, setMode] = useState(shared ? (shared.files && shared.files.length ? "image" : sharedUrl ? "link" : "text") : mode0 || "link");
+    const [link, setLink] = useState(sharedUrl);
+    const [text, setText] = useState(shared && !sharedUrl ? [shared.title, shared.text].filter(Boolean).join("\n") : "");
+    const [files, setFiles] = useState(shared && shared.files ? shared.files : []);
+    const [busy, setBusy] = useState(false);
+    const [status, setStatus] = useState("");
+    const [prog, setProg] = useState(null);
+    const [err, setErr] = useState(null);
+    const fileRef = useRef(null), started = useRef(false);
+    const urls = useMemo(() => files.map(f => { try { return URL.createObjectURL(f); } catch (e) { return ""; } }), [files]);
+    useEffect(() => () => urls.forEach(u => { try { URL.revokeObjectURL(u); } catch (e) { /* gone */ } }), [urls]);
+    const fail = e => { setBusy(false); setStatus(""); setProg(null); setErr(IMPORT_FAIL[e && e.code] || IMPORT_FAIL.fetch); };
+    const fromLink = () => {
+      if (busy) return;
+      if (!Imp.normUrl(link)) { setErr(IMPORT_FAIL.nourl); return; }
+      setErr(null); setBusy(true);
+      Imp.fromLink(link, setStatus).then(r => { setBusy(false); onDraft(r.draft, r.how, ""); }, fail);
+    };
+    const fromImages = list => {
+      const fs = list || files;
+      if (busy || !fs.length) { if (!fs.length && fileRef.current) fileRef.current.click(); return; }
+      setErr(null); setBusy(true); setProg(0);
+      Imp.readImages(fs, (p, t) => { setProg(p); setStatus(t); }).then(raw => {
+        setBusy(false); setProg(null);
+        if (raw.replace(/\s/g, "").length < 20) { setErr(IMPORT_FAIL.ocr); setText(raw); return; }
+        onDraft(Imp.fromText(raw), "ocr", raw.trim());
+      }, fail);
+    };
+    const fromText = () => {
+      if (text.trim().length < 10) { setErr("Füg zuerst den Text des Rezepts ein."); return; }
+      onDraft(Imp.fromText(text), "text", "");
+    };
+    const pick = e => {
+      const list = Array.prototype.slice.call(e.target.files || []).filter(f => /^image\//.test(f.type)).slice(0, 8);
+      e.target.value = "";
+      if (list.length) { setFiles(list); setErr(null); fromImages(list); }
+    };
+    const paste = () => {
+      try { navigator.clipboard.readText().then(t => { if (t) { if (mode === "link") setLink(t.trim()); else setText(t); setErr(null); } }, () => setErr("Der Browser gibt die Zwischenablage nicht frei. Füg den Inhalt von Hand ins Feld ein.")); }
+      catch (e) { setErr("Der Browser gibt die Zwischenablage nicht frei. Füg den Inhalt von Hand ins Feld ein."); }
+    };
+    /* Shared from another app: start right away. */
+    useEffect(() => {
+      if (!shared || started.current) return;
+      started.current = true;
+      if (shared.files && shared.files.length) fromImages(shared.files);
+      else if (sharedUrl) fromLink();
+      else if (text.trim().length >= 10) fromText();
+    }, []);
+    const canPaste = !!(navigator.clipboard && navigator.clipboard.readText);
+    return html`
+      <${Sheet} title="Rezept übernehmen" onClose=${onClose} error=${err}>
+        <div class="seg" role="tablist" aria-label="Woher kommt das Rezept?">${MODES_IMPORT.map(([id, label, e]) => html`
+          <button type="button" key=${id} role="tab" aria-selected=${String(mode === id)} aria-pressed=${String(mode === id)} disabled=${busy} onClick=${() => { setMode(id); setErr(null); }}><span class="emo" aria-hidden="true">${e}</span> ${label}</button>`)}
+        </div>
+        ${mode === "link" && html`
+          <div class="field">
+            <label for="hp-imp-link">Link zum Rezept</label>
+            <input id="hp-imp-link" class="input" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://fooby.ch/… oder https://migusto.migros.ch/…" value=${link} data-autofocus=""
+              onInput=${e => { setLink(e.target.value); setErr(null); }} onKeyDown=${e => { if (e.key === "Enter") { e.preventDefault(); fromLink(); } }} />
+            ${canPaste && html`<div><button type="button" class="btn small" disabled=${busy} onClick=${paste}><${Icon} n="copy" s=${16} />Aus der Zwischenablage</button></div>`}
+            <p class="hint">Am besten klappt es mit Rezeptseiten wie Fooby (Coop), Migusto (Migros), Betty Bossi, Swissmilk oder Chefkoch. Bei Instagram oder TikTok geht es meist besser mit einem Screenshot. Die Adresse geht an einen öffentlichen Lesedienst, der die Seite für den Browser holt; sonst nichts.</p>
+          </div>
+          <div class="foot"><button type="button" class="btn primary block" disabled=${busy} onClick=${fromLink}><span class="emo" aria-hidden="true">✨</span>${busy ? "Wird geholt …" : "Rezept holen"}</button></div>`}
+        ${mode === "image" && html`
+          <div class="field">
+            <span class="label">Screenshots</span>
+            <input id="hp-imp-file" class="sr" type="file" accept="image/*" multiple ref=${fileRef} onChange=${pick} />
+            <label class=${"btn" + (files.length ? "" : " primary")} for="hp-imp-file"><${Icon} n="upload" s=${18} />${files.length ? "Andere Bilder wählen" : "Bilder wählen"}</label>
+            ${files.length > 0 && html`<div class="thumbs">${urls.map((u, k) => html`<img key=${k} src=${u} alt=${"Screenshot " + (k + 1)} />`)}</div>`}
+            <p class="hint">Ein oder mehrere Screenshots, etwa die Zutaten und die Zubereitung auf zwei Bildern. Der Text wird direkt auf diesem Gerät gelesen; die Bilder verlassen es nicht und werden nicht gespeichert.</p>
+          </div>
+          ${files.length > 0 && !busy && html`<div class="foot"><button type="button" class="btn primary block" onClick=${() => fromImages()}><span class="emo" aria-hidden="true">✨</span>Text lesen und Rezept erstellen</button></div>`}`}
+        ${mode === "text" && html`
+          <div class="field">
+            <label for="hp-imp-text">Text des Rezepts</label>
+            <textarea id="hp-imp-text" class="input area tall" rows="10" maxlength="30000" placeholder=${"Spaghetti aglio e olio\n\nZutaten für 2 Personen\n200 g Spaghetti\n3 Knoblauchzehen\n…\n\nZubereitung\n…"} value=${text} onInput=${e => { setText(e.target.value); setErr(null); }}></textarea>
+            ${canPaste && html`<div><button type="button" class="btn small" onClick=${paste}><${Icon} n="copy" s=${16} />Aus der Zwischenablage</button></div>`}
+            <p class="hint">Zum Beispiel die Beschreibung eines Instagram-Beitrags oder ein Rezept aus einer Nachricht. Überschriften wie «Zutaten» und «Zubereitung» helfen, nötig sind sie nicht.</p>
+          </div>
+          <div class="foot"><button type="button" class="btn primary block" onClick=${fromText}><span class="emo" aria-hidden="true">✨</span>Rezept erstellen</button></div>`}
+        ${busy && html`
+          <div class="import-busy" role="status" aria-live="polite">
+            <span class="spin" aria-hidden="true"></span><span>${status || "Einen Moment …"}</span>
+            ${prog != null && html`<span class="bar-t"><i class="bar-f" style=${"display:block;width:" + Math.round(prog * 100) + "%"}></i></span>`}
+          </div>`}
+      <//>`;
+  }
+
+  Object.assign(U, { Recipes, RecipeView, RecipeForm, MealSheet, ImportSheet, findRecipe, dailyIdea, recipeMeta: metaOf });
 })();

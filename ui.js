@@ -46,7 +46,7 @@
   }
   const FAIL = {
     storage: "Speichern auf diesem Gerät ist nicht möglich. Der Browser-Speicher ist voll oder gesperrt (privater Modus?).",
-    "permission-denied": "Der Gruppen-Sync hat das Speichern abgelehnt. Prüf in Firebase die Sicherheitsregeln (siehe README).",
+    "permission-denied": "Firebase lehnt das Speichern ab: Im Projekt fehlen die Sicherheitsregeln des Home-Planers. Auf der Startseite unter «Gruppen-Sync: noch ein Schritt» steht, wie es geht.",
     "resource-exhausted": "Das Tageskontingent des Gruppen-Syncs ist aufgebraucht. Morgen geht es weiter.",
     "not-found": "Diesen Haushalt gibt es nicht mehr.",
     "doc-gone": "Diesen Eintrag hat inzwischen jemand gelöscht.",

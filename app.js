@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   var root = document.getElementById("app"), P = window.htmPreact, HP = window.HP, Store = window.HPStore, U = window.HPUI;
-  if (!P || !HP || !Store || !window.HPRates || !U || !U.Kasse || !U.Shopping || !U.Calendar || !U.Plants || !U.Infos || !U.Recipes) {
+  if (!P || !HP || !Store || !window.HPRates || !U || !U.Kasse || !U.Shopping || !U.Calendar || !U.Plants || !U.Infos || !U.Recipes || !U.CookMode || !window.HPImport) {
     var bs = document.getElementById("boot-status");
     if (bs) bs.textContent = "Der Home-Planer konnte nicht geladen werden. Prüf die Verbindung und lade die Seite neu.";
     return;
@@ -118,6 +118,53 @@
       <//>`;
   }
 
+  /* ---------- is the group sync ready? ---------- */
+  /* Why a household was created on this device although the group sync is on. */
+  const REFUSED = {
+    "permission-denied": "Angelegt, vorerst nur auf diesem Gerät: Firebase lässt den Home-Planer noch nicht zu, es fehlen die Regeln. Auf der Startseite steht, was zu tun ist.",
+    "setup-db": "Angelegt, vorerst nur auf diesem Gerät: Im Firebase-Projekt fehlt die Datenbank. Auf der Startseite steht, was zu tun ist.",
+    "not-found": "Angelegt, vorerst nur auf diesem Gerät: Im Firebase-Projekt fehlt die Datenbank. Auf der Startseite steht, was zu tun ist.",
+    "invalid-argument": "Angelegt, vorerst nur auf diesem Gerät: Firebase lehnt die Angaben aus config.js ab.",
+    unauthenticated: "Angelegt, vorerst nur auf diesem Gerät: Firebase lehnt die Angaben aus config.js ab.",
+    "failed-precondition": "Angelegt, vorerst nur auf diesem Gerät: Firebase lehnt die Angaben aus config.js ab.",
+    "resource-exhausted": "Angelegt, vorerst nur auf diesem Gerät: Das Tageskontingent von Firebase ist aufgebraucht."
+  };
+  /* The answer of the sync server to a probe, once per visit of the start page (at most every half minute). */
+  const health = { state: null, at: 0 };
+  function useCloudHealth() {
+    const [state, setState] = useState(health.state);
+    const run = useCallback(force => {
+      if (!Store.cloudOn || navigator.onLine === false) return;
+      if (!force && Date.now() - health.at < 30000) { setState(health.state); return; }
+      health.at = Date.now();
+      setState(s => (force ? "checking" : s));
+      Store.checkCloud().then(() => { health.state = "ok"; setState("ok"); },
+        e => { const c = e && e.code; health.state = c === "unavailable" || c === "timeout" || c === "internal" ? null : c; setState(health.state); });
+    }, []);
+    useEffect(() => { run(false); }, [run]);
+    return [state, () => run(true)];
+  }
+  function SyncTrouble({ onSetup }) {
+    const [state, recheck] = useCloudHealth();
+    if (!state || state === "ok") return null;
+    const busy = state === "checking";
+    const text = state === "permission-denied"
+      ? "Firebase lässt den Home-Planer noch nicht zu: Im Projekt fehlen seine Sicherheitsregeln. Bis dahin werden Haushalte nur auf diesem Gerät gespeichert. Das Einsetzen dauert zwei Minuten: Regeln kopieren, im Regel-Editor einfügen, veröffentlichen."
+      : CLOUD_ERR[state] || "Der Gruppen-Sync antwortet nicht wie erwartet. Bis das geklärt ist, werden Haushalte nur auf diesem Gerät gespeichert.";
+    return html`
+      <section class="tip plain warn" aria-label="Gruppen-Sync">
+        <span class="x-ic k-late" aria-hidden="true">🔒</span>
+        <div class="tip-body">
+          <strong>Gruppen-Sync: noch ein Schritt</strong>
+          <p>${busy ? "Wird geprüft …" : text}</p>
+          <div class="btn-row">
+            <button type="button" class="btn primary small" onClick=${onSetup}>So geht es</button>
+            <button type="button" class="btn small" disabled=${busy} onClick=${recheck}><${Icon} n="refresh" s=${16} />Nochmals prüfen</button>
+          </div>
+        </div>
+      </section>`;
+  }
+
   /* ---------- start page: the households on this device ---------- */
   function Home({ reg, onOpen, onNew, onJoin, onSettings, onSetup, onInstall }) {
     return html`
@@ -129,6 +176,7 @@
         <p>Kasse, Einkauf, Rezepte, Kalender, Pflanzen und Infos für euren Haushalt.</p>
       </header>
       ${!Store.storageOk && html`<div class="note warn" role="alert"><${Icon} n="device" /><div>Dieser Browser lässt nichts speichern (privater Modus oder gesperrte Website-Daten). Haushalte gehen verloren, sobald du die Seite schliesst. Öffne den Home-Planer in einem gewöhnlichen Fenster.</div></div>`}
+      ${Store.cloudOn && html`<${SyncTrouble} onSetup=${onSetup} />`}
       <${InstallHint} onHow=${onInstall} />
       ${reg.length > 0
         ? html`
@@ -457,9 +505,9 @@
       const members = {};
       list.forEach((p, i) => { members[p.k] = { name: p.name, c: i % 8, o: i, gone: false, a: p.a }; });
       lock.current = true; setBusy(true);
-      const id = await act.createHome({ name: name.trim(), base, rates: {}, members, created: Date.now() });
+      const r = await act.createHome({ name: name.trim(), base, rates: {}, members, created: Date.now() });
       lock.current = false; setBusy(false);
-      if (id) onCreated(id, mine);
+      if (r) onCreated(r.id, mine, r.note);
     };
     return html`
       <${Sheet} title="Neuer Haushalt" onClose=${onClose} error=${err} action=${html`<button type="button" class="btn primary small" disabled=${busy} onClick=${create}>Anlegen</button>`}>
@@ -808,6 +856,21 @@
   };
   TROUBLE.unauthenticated = TROUBLE["failed-precondition"] = TROUBLE["invalid-argument"];
   const HOME_URL = location.pathname + location.search;
+  /* What another app shared with the Home-Planer (see sw.js): read once, then thrown away. Older than ten minutes: ignored. */
+  async function takeShared() {
+    try {
+      if (!window.caches) return null;
+      const cache = await caches.open("hp-share"), m = await cache.match("shared/meta");
+      if (!m) return null;
+      const meta = await m.json(), files = [];
+      for (let i = 0; i < Math.min(8, meta.n || 0); i++) {
+        const r = await cache.match("shared/" + i);
+        if (r) { const b = await r.blob(); files.push(new File([b], "screenshot-" + (i + 1) + ".png", { type: b.type || "image/png" })); }
+      }
+      await caches.delete("hp-share");
+      return Date.now() - (meta.at || 0) < 600000 ? { title: meta.title || "", text: meta.text || "", url: meta.url || "", files } : null;
+    } catch (e) { return null; }
+  }
   const historyState = () => { try { return history.state || null; } catch (e) { return null; } };
   /* The address always names the open household, so the page can be bookmarked and the back button works.
      A household opened on top of the list is marked ("over"): leaving it is then one step back, and no dead entries pile up. */
@@ -835,7 +898,7 @@
     const [sheet, setSheet] = useState(null);
     const [toast, setToast] = useState(null);
     const [meMap, setMeMap] = useState(() => ls.get("hp.me", {}));
-    const sheetRef = useRef(null), homeRef = useRef(null), leaving = useRef(false);
+    const sheetRef = useRef(null), homeRef = useRef(null), leaving = useRef(false), pendingShare = useRef(null);
     sheetRef.current = sheet; homeRef.current = homeId;
     const say = useCallback((msg, kind) => setToast({ msg, kind: kind || "ok", k: Date.now() }), []);
     const refreshReg = useCallback(() => setReg(Store.registry.list()), []);
@@ -878,7 +941,7 @@
 
     useEffect(() => {
       const hashId = () => { try { return (location.hash || "").replace(/^#/, ""); } catch (e) { return ""; } };
-      const h = hashId();
+      const h = hashId(), sharing = h === "teilen";
       let start = null;
       if (h && Store.validId(h)) start = h;
       else {
@@ -892,8 +955,19 @@
         if (!kept) setUrl(null);
         if (!join(start, !kept)) setUrl(null);
       } else setUrl(null);
+      const receive = () => takeShared().then(p => {
+        if (!p) return;
+        if (!homeRef.current) {
+          /* several households and none open: the recipe waits until one is chosen */
+          if (Store.registry.list().length) { pendingShare.current = p; say("Wähl den Haushalt, in den das Rezept soll."); return; }
+          say("Leg zuerst einen Haushalt an. Dann teil das Rezept nochmals mit dem Home-Planer.", "err"); return;
+        }
+        setTimeout(() => { setTab("recipes"); open({ t: "import", shared: p }); }, 0);
+      });
+      if (sharing) receive();
       const onHash = () => {
         const x = hashId();
+        if (x === "teilen") { if (homeRef.current) setUrl(homeRef.current); else setUrl(null); receive(); return; }
         if (leaving.current) { leaving.current = false; if (x) setUrl(null); return; }      // arrived beneath the household after "Haushalte"
         if (x && Store.validId(x)) { if (x !== homeRef.current) join(x, false); return; }
         if (sheetRef.current && homeRef.current) {                                         // "back" closes an open sheet first and stays in the household
@@ -999,12 +1073,21 @@
     const act = useMemo(() => {
       const a = Store.adapter(mode || "local"), ok = p => p.then(() => true, fail);
       return {
+        /* With the group sync on, a household is created on the server. If the server refuses (rules not yet published, no
+           database, quota used up), it is created on this device instead, so the app works right away; «Einladen» shares it later. */
         async createHome(data) {
-          const id = Store.randomId(22), m = Store.cloudOn ? "cloud" : "local";
-          try { await Store.adapter(m).createHome(id, clean(data)); } catch (e) { fail(e); return null; }
+          const id = Store.randomId(22);
+          let m = Store.cloudOn ? "cloud" : "local", note = null;
+          try { await Store.adapter(m).createHome(id, clean(data)); }
+          catch (e) {
+            if (m !== "cloud" || !REFUSED[e && e.code]) { fail(e); return null; }
+            try { await Store.adapter("local").createHome(id, clean(data)); } catch (e2) { fail(e2); return null; }
+            m = "local"; note = REFUSED[e.code];
+            health.state = e.code; health.at = Date.now();
+          }
           Store.registry.put({ id, name: data.name, mode: m });
           try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) { /* optional */ }
-          return id;
+          return { id, note };
         },
         patchHome(id, patch) { return ok(a.patchHome(id, clean(patch))); },
         /* Remember the last rate per currency in the household: the fallback for devices without network. */
@@ -1046,6 +1129,12 @@
       }
     }, []);
 
+    useEffect(() => {
+      if (!homeId || !pendingShare.current) return;
+      const p = pendingShare.current; pendingShare.current = null;
+      setTimeout(() => { setTab("recipes"); open({ t: "import", shared: p }); }, 0);
+    }, [homeId, open]);
+
     /* Everything the modules need, in one object. */
     const members = useMemo(() => (home ? membersOf(home) : []), [home]);
     const byId = useMemo(() => { const o = {}; if (home) membersOf(home, true).forEach(m => { o[m.id] = m; }); return o; }, [home]);
@@ -1083,7 +1172,7 @@
     if (sheet) {
       const s = sheet;
       if (s.t === "home-new") sheetEl = html`<${HomeNew} key=${s.k} act=${act} onClose=${close}
-        onCreated=${(id, mine) => { if (mine) rememberMe(id, mine); showHome(id, true); say("Haushalt angelegt. Willkommen zu Hause! 🏡"); }} />`;
+        onCreated=${(id, mine, note) => { if (mine) rememberMe(id, mine); showHome(id, true); say(note || "Haushalt angelegt. Willkommen zu Hause! 🏡", note ? "err" : "ok"); }} />`;
       else if (s.t === "join") sheetEl = html`<${JoinSheet} key=${s.k} onClose=${close} onJoin=${id => { join(id, true); }} />`;
       else if (s.t === "settings") sheetEl = html`<${SettingsSheet} key=${s.k} onClose=${close}
         onSetup=${() => open({ t: "setup" })} onInstall=${() => open({ t: "install" })}
@@ -1106,15 +1195,24 @@
         else if (s.t === "expense") sheetEl = html`<${U.ExpenseForm} key=${s.k} home=${h} expense=${s.e || null} preset=${s.preset} meId=${meId} act=${act} onClose=${close} say=${say} />`;
         else if (s.t === "transfer") sheetEl = html`<${U.TransferForm} key=${s.k} home=${h} transfer=${s.e || null} preset=${s.preset} meId=${meId} act=${act} onClose=${close} say=${say} />`;
         else if (s.t === "item") sheetEl = html`<${U.ItemSheet} key=${s.k} ctx=${ctx} it=${findIn("shopping", s.it.id, s.it)} onClose=${close} />`;
+        else if (s.t === "aisles") sheetEl = html`<${U.AislesSheet} key=${s.k} ctx=${ctx} onClose=${close} />`;
         else if (s.t === "event") sheetEl = html`<${U.EventForm} key=${s.k} ctx=${ctx} ev=${s.e ? findIn("events", s.e.id, s.e) : null} date=${s.date} at=${s.at} onClose=${close} />`;
         else if (s.t === "recipe") {
           const r = U.findRecipe(ctx, s.id);
-          if (r) sheetEl = html`<${U.RecipeView} key=${s.k} ctx=${ctx} r=${r} plan=${s.plan} onClose=${close} />`;
+          if (r) sheetEl = html`<${U.RecipeView} key=${s.k} ctx=${ctx} r=${r} plan=${s.plan} fresh=${s.fresh} onClose=${close} />`;
         }
         /* Editing a recipe that was open leads back to it; a new one opens once it is saved. */
-        else if (s.t === "recipe-edit") sheetEl = html`<${U.RecipeForm} key=${s.k} ctx=${ctx} r=${s.r ? findIn("recipes", s.r.id, s.r) : null}
+        else if (s.t === "recipe-edit") sheetEl = html`<${U.RecipeForm} key=${s.k} ctx=${ctx} r=${s.r ? findIn("recipes", s.r.id, s.r) : null} draft=${s.draft} source=${s.source} how=${s.how}
           onClose=${deleted => (s.r && !deleted ? setSheet({ t: "recipe", id: s.r.id, k: newId() }) : close())}
-          onSaved=${id => setSheet({ t: "recipe", id, k: newId() })} />`;
+          onSaved=${(id, imported) => setSheet({ t: "recipe", id, fresh: !!imported, k: newId() })} />`;
+        /* A link, screenshots or text become a draft to check in the recipe form. */
+        else if (s.t === "import") sheetEl = html`<${U.ImportSheet} key=${s.k} ctx=${ctx} mode=${s.mode} shared=${s.shared} onClose=${close}
+          onDraft=${(draft, how, source) => setSheet({ t: "recipe-edit", draft, how, source, k: newId() })} />`;
+        /* Cooking mode lies over everything; closing it leads back to the recipe. */
+        else if (s.t === "cook") {
+          const r = U.findRecipe(ctx, s.id);
+          if (r) sheetEl = html`<${U.CookMode} key=${s.k} ctx=${ctx} r=${r} serves=${s.serves} onClose=${() => setSheet({ t: "recipe", id: s.id, k: newId() })} />`;
+        }
         else if (s.t === "meal") sheetEl = html`<${U.MealSheet} key=${s.k} ctx=${ctx} date=${s.date} rid=${s.rid} onClose=${close} />`;
         else if (s.t === "plant") sheetEl = html`<${U.PlantForm} key=${s.k} ctx=${ctx} p=${s.p ? findIn("plants", s.p.id, s.p) : null} onClose=${close} />`;
         else if (s.t === "info") {

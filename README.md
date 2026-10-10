@@ -1,13 +1,13 @@
 # Home-Planer
 
-Euer Haushalt an einem Ort, als Web-App fürs Handy: gemeinsame Kasse, Einkaufsliste, Rezepte und Kochideen, Kalender, Giessplan für die Pflanzen und wichtige Infos wie Mietvertrag und Versicherungen. Die App läuft im Browser, lässt sich aufs Handy legen und startet auch ohne Netz. Gebaut auf der Grundlage der Ferienkasse ([Splite-weiser](https://github.com/marcesss97/Splite-weiser)): gleiches Aussehen, gleicher Gruppen-Sync, gleiche Bedienung.
+Euer Haushalt an einem Ort, als Web-App fürs Handy: gemeinsame Kasse, Einkaufsliste für Migros oder Coop, Rezepte mit Kochmodus, Kalender, Giessplan für die Pflanzen und wichtige Infos wie Mietvertrag und Versicherungen. Die App läuft im Browser, lässt sich aufs Handy legen und startet auch ohne Netz. Gebaut auf der Grundlage der Ferienkasse ([Splite-weiser](https://github.com/marcesss97/Splite-weiser)): gleiches Aussehen, gleicher Gruppen-Sync, gleiche Bedienung.
 
 | Bereich | Was er kann |
 |---|---|
 | 🏠 **Start** | Was heute ansteht (Termine, geplantes Essen, durstige Pflanzen, Fristen), eine Kochidee, die nächsten Tage, die Einkaufsliste zum schnellen Ergänzen und das eigene Saldo der Kasse |
 | 💰 **Kasse** | Wer hat was bezahlt, wer schuldet wem? Aufteilen gleich, nach Anteilen, nach Beträgen oder nach Positionen; Abrechnung mit möglichst wenigen Zahlungen; Statistik pro Monat und Kategorie; fremde Währungen zum Tageskurs |
-| 🛒 **Einkauf** | Eine Zeile genügt («2 Liter Milch»); jeder Artikel landet von selbst in seiner Abteilung. Abhaken im Laden, Abgehaktes mit einem Tipp wieder auf die Liste, und danach «Als Ausgabe erfassen» |
-| 🍳 **Rezepte** | Eure Rezeptsammlung und 26 eingebaute Kochideen. «Was koche ich heute?» würfelt eine Idee, die Suche findet Rezepte zu dem, was im Kühlschrank ist. Auf andere Portionen umrechnen, Zutaten mit einem Tipp auf die Einkaufsliste, Wochenplan mit «Wer kocht?» |
+| 🛒 **Einkauf** | Eine Zeile genügt («2 Liter Milch»); jeder Artikel landet von selbst in seiner Abteilung. Für Migros oder Coop sortiert in der Reihenfolge des Ladens (anpassbar an eure Filiale), mit Suche im Onlineshop. Abhaken im Laden, Abgehaktes mit einem Tipp wieder auf die Liste, die Liste teilen, und danach «Als Ausgabe erfassen» |
+| 🍳 **Rezepte** | Rezepte aus einem Link, einem Screenshot oder einem kopierten Text übernehmen: Die App erkennt Zutaten, Schritte, Zeit und Portionen von selbst. Der **Kochmodus** führt Schritt für Schritt durchs Rezept, mit Timern, Vorlesen und Bildschirm, der anbleibt. Dazu eure Rezeptsammlung und 26 eingebaute Kochideen. «Was koche ich heute?» würfelt eine Idee, die Suche findet Rezepte zu dem, was im Kühlschrank ist. Auf andere Portionen umrechnen, Zutaten mit einem Tipp auf die Einkaufsliste, Wochenplan mit «Wer kocht?» |
 | 📅 **Kalender** | Monatsansicht und «Demnächst». Termine über mehrere Tage, mit Uhrzeit, wiederkehrend (wöchentlich, alle 2 Wochen, monatlich, jährlich), einzelne Wiederholungen streichbar. Arten wie Abfuhr, Geburtstag, Besuch, Ferien |
 | 🪴 **Pflanzen** | Jede Pflanze mit ihrem Rhythmus. Die durstigsten zuerst, ein Tipp auf 💧 notiert, wer heute gegossen hat. Düngen, Raum, Zuständigkeit und Verlauf |
 | 📁 **Infos** | Mietvertrag, Versicherungen, Abos, Kontakte, WLAN, Entsorgung: Vorlagen mit den üblichen Feldern, Kopieren mit einem Tipp, Telefonnummern zum Antippen, Links zu Dokumenten, Fristen mit Erinnerung in der Übersicht |
@@ -44,7 +44,7 @@ Mit dem Gruppen-Sync trägt jede Person auf dem eigenen Handy ein, alle sehen di
 
 Wer die Regeln schon einmal eingesetzt hat, bevor es die Rezepte gab: bitte nochmals den aktuellen Inhalt von `firestore.rules` veröffentlichen. Sonst lehnt Firebase das Speichern von Rezepten ab.
 
-Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft danach weiter wie bisher. Bis die Regeln veröffentlicht sind, meldet der Home-Planer beim Anlegen eines Haushalts «Der Gruppen-Sync hat das Speichern abgelehnt».
+Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft danach weiter wie bisher. Bis die Regeln veröffentlicht sind, legt der Home-Planer neue Haushalte nur auf dem Gerät an und zeigt auf der Startseite «Gruppen-Sync: noch ein Schritt». Sind die Regeln da, verschwindet der Hinweis nach «Nochmals prüfen»; einen solchen Haushalt gebt ihr dann über «Einladen» für alle frei.
 
 **Lieber ein eigenes Firebase-Projekt?** Dann wie bei der Ferienkasse: Projekt anlegen, Firestore-Datenbank erstellen (Standort zum Beispiel `europe-west6 (Zürich)`, «Production mode»), die Regeln aus `firestore.rules` einsetzen, unter «Project settings» eine Web-App registrieren und den Block `const firebaseConfig = { … };` in `config.js` ersetzen. Die App führt unter «Gruppen-Sync einrichten» Schritt für Schritt durch, mit Knopf zum Kopieren der Regeln. Ohne Gruppen-Sync (`const firebaseConfig = null;`) liegt jeder Haushalt nur auf dem Gerät, auf dem er angelegt wurde.
 
@@ -63,9 +63,12 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 2. Haushalt anlegen, oben «Einladen», das zweite Handy öffnet den Link oder scannt den QR-Code. Beide tippen auf das Fragezeichen auf dem Band und wählen ihren Namen.
 3. Ein Handy setzt «Milch» auf die Einkaufsliste, das andere hakt sie ab. Beides erscheint ohne Neuladen auf dem anderen Handy.
 4. Unter «Rezepte» eine Kochidee öffnen, «Übernehmen» und «Einplanen»: Das Rezept und das geplante Essen erscheinen auf dem anderen Handy.
-5. Eine Pflanze eintragen und auf 💧 tippen: Auf dem anderen Handy steht «Gegossen».
-6. Ein Handy in den Flugmodus, eine Ausgabe eintragen, Flugmodus aus: Die Ausgabe erscheint drüben.
-7. Probe-Haushalt wieder löschen: Regler-Symbol im Haushalt, «Haushalt für alle löschen».
+5. Unter «Rezepte» auf «Aus Link» tippen und die Adresse eines Rezepts von Fooby, Migusto oder Betty Bossi einfügen: Nach ein paar Sekunden steht das Rezept zum Prüfen da. «Speichern», dann «Kochmodus starten» und bei einem Schritt mit Zeitangabe den Timer antippen.
+6. Einen Screenshot eines Rezepts (etwa aus Instagram) über «Screenshot» wählen: Zutaten und Schritte erscheinen im Formular.
+7. Auf der Einkaufsliste «Migros» oder «Coop» wählen: Die Abteilungen stehen in der Reihenfolge des Ladens.
+8. Eine Pflanze eintragen und auf 💧 tippen: Auf dem anderen Handy steht «Gegossen».
+9. Ein Handy in den Flugmodus, eine Ausgabe eintragen, Flugmodus aus: Die Ausgabe erscheint drüben.
+10. Probe-Haushalt wieder löschen: Regler-Symbol im Haushalt, «Haushalt für alle löschen».
 
 ## Die Bereiche im Detail
 
@@ -73,7 +76,20 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 
 **Einkaufsliste.** Mengen gehen gleich mit: «3 Joghurt», «Äpfel 1kg», «500 g Hackfleisch». Die Abteilung errät die App aus einem Stichwortverzeichnis (Milch, Käse & Eier · Brot · Getränke · Drogerie …); ein Tipp auf den Artikel ändert sie. Abgehakte Artikel warten unter «Im Wagen». Beim nächsten Mal genügt es, ein paar Buchstaben zu tippen: Abgehaktes erscheint als Vorschlag und kommt mit einem Tipp zurück auf die Liste. «Erledigte löschen» räumt auf.
 
+**Migros oder Coop.** Oben auf der Liste wählt ihr den Laden («Egal wo», «Migros», «Coop»); die Wahl gilt für den ganzen Haushalt. Die Abteilungen stehen dann in der typischen Reihenfolge des Ladens, vom Eingang zur Kasse. Jede Filiale ist anders: Unter «Reihenfolge» schiebt ihr die Abteilungen so, wie ihr durch euren Laden geht, getrennt für Migros und Coop. Ein Tipp auf einen Artikel bietet «Im Onlineshop suchen» bei Migros oder Coop an, etwa für den Lieferdienst. «Liste teilen» schickt die offene Liste, nach Abteilungen geordnet, als Text in den Chat (wo das Handy kein Teilen kennt, wird sie kopiert).
+
 **Rezepte und Kochideen.** Ganz oben würfelt «Was koche ich heute?» eine Idee aus euren Rezepten und den eingebauten Kochideen; Filter für Vegi, Schnell und Günstig, und was in den letzten Tagen gekocht wurde, kommt nicht dran. Das Suchfeld nimmt auch mehrere Zutaten («Zucchetti, Feta») und zeigt, welche Rezepte dazu passen. Ein Rezept rechnet die Zutaten auf beliebig viele Portionen um. «Auf die Einkaufsliste» setzt die angekreuzten Zutaten mit Menge auf die Liste, in die richtige Abteilung und mit dem Vermerk «für …»; Grundvorrat wie Salz, Öl oder Bouillon ist dabei schon abgewählt, und was schon auf der Liste steht, kommt nicht doppelt. Eine Kochidee wird mit «Übernehmen» zu eurem eigenen Rezept, das ihr anpassen könnt. Eigene Rezepte: Zutaten und Schritte je eine Zeile, dazu Zeit, Portionen, Merkmale, Link zum Original, Favoriten und «Heute gekocht». Der **Wochenplan** zeigt die nächsten sieben Tage; ein geplantes Essen ist ein Termin der Art «Essen» und steht deshalb auch im Kalender und auf «Start», mit «Marc kocht».
+
+**Rezepte übernehmen.** Auf dem Reiter «Rezepte» stehen drei Wege; jedes Mal entsteht ein Entwurf, den ihr im Formular prüft und speichert. Danach geht es direkt weiter auf die Einkaufsliste oder in den Kochmodus.
+
+- **Aus Link:** die Adresse einer Rezeptseite einfügen (auch mitten in einem Text, etwa aus einem Chat). Die meisten Rezeptseiten, darunter Fooby (Coop), Migusto (Migros), Betty Bossi, Swissmilk und Chefkoch, beschreiben ihre Rezepte zusätzlich in einem maschinenlesbaren Format (schema.org); daraus übernimmt die App Titel, Zutaten, Schritte, Zeit, Portionen und das Original als Link. Fehlt dieses Format, liest sie den Text der Seite. Weil Browser fremde Seiten nicht direkt lesen dürfen, holt ein öffentlicher Lesedienst die Seite (siehe [Wer sieht was?](#wer-sieht-was-sicherheit-und-daten)).
+- **Screenshot:** ein oder mehrere Bilder, zum Beispiel die Zutaten und die Zubereitung auf zwei Screenshots aus Instagram, TikTok oder einem Kochbuch-Foto. Die Texterkennung (Tesseract) läuft auf dem Gerät selbst. Beim ersten Mal lädt sie rund 5 MB aus dem Ordner `ocr/`, danach geht es auch ohne Netz. Unter «Erkannten Text anzeigen» seht ihr, was gelesen wurde.
+- **Aus Text:** eine Instagram-Beschreibung oder ein Rezept aus einer Nachricht einfügen. Überschriften wie «Zutaten» und «Zubereitung» helfen, nötig sind sie nicht; Hashtags und Emojis fallen weg.
+- **Teilen an die App (Android):** Ist der Home-Planer installiert, steht er im Teilen-Menü von Chrome, Instagram, der Galerie und anderen Apps. Ein geteilter Link, Text oder Screenshot öffnet direkt den Import. Danach fragt die App, in welchen Haushalt das Rezept soll, wenn es mehrere gibt.
+
+Bild, Art und Merkmale (Vegi, Vegan, Schnell) errät die App aus Titel und Zutaten; alles lässt sich im Formular ändern. Erkennung ist nie perfekt: Ein kurzer Blick auf den Entwurf lohnt sich, vor allem bei Screenshots.
+
+**Kochmodus.** «Kochmodus starten» in einem Rezept öffnet eine ganze Bildschirmseite pro Schritt, gross lesbar, mit den Zutaten, die der Schritt braucht. Zuerst kommt «Zuerst bereitstellen» mit allen Zutaten für die gewählte Zahl Portionen. Weiter geht es mit «Weiter», mit einem Wisch zur Seite oder mit den Pfeiltasten. Steht in einem Schritt eine Zeit («12 Minuten kochen», «1½ Stunden schmoren», «eine halbe Stunde kühl stellen»), startet ein Tipp den Timer. Mehrere Timer laufen gleichzeitig, auch wenn ihr weiterblättert; ist die Zeit um, klingelt und vibriert das Handy, bis ihr «OK» tippt. Der Bildschirm bleibt an, solange der Kochmodus offen ist (wo der Browser das erlaubt). Der Lautsprecher oben liest jeden Schritt vor, «Aa» macht die Schrift grösser. Am Schluss merkt «Als gekocht merken» das Datum, damit «Was koche ich heute?» das Rezept eine Weile auslässt. Schliesst ihr den Kochmodus, während ein Timer läuft, fragt die App nach.
 
 **Kalender.** Ein Tipp auf einen Tag zeigt seine Termine; «Demnächst» listet die nächsten 30 Tage, jeden Termin einmal. Bei der Art «Abfuhr» ist «Jede Woche» schon gewählt, bei «Geburtstag» «Jedes Jahr». Fällt eine Abfuhr wegen eines Feiertags aus, öffnet man sie an diesem Tag und wählt «Nur am … ausfallen lassen». Monatliche Termine am 29. bis 31. fallen in kürzeren Monaten aus, wie in den gängigen Kalendern.
 
@@ -89,6 +105,8 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 - «Notiert von» und «Gegossen von» sind Angaben, kein Beweis. Für einen Haushalt, der sich vertraut, passt das.
 - **Die Werte in `config.js` sind keine Passwörter.** Sie sagen dem Browser nur, welches Firebase-Projekt gemeint ist, und sind bei jeder Firebase-Web-App öffentlich. Geschützt werden die Daten durch die Regeln.
 - Links in Infos öffnet die App nur, wenn sie mit `https://` oder `http://` beginnen.
+- **Rezept aus einem Link:** Die Adresse des Rezepts geht an einen öffentlichen Lesedienst (der Reihe nach `api.allorigins.win`, `api.codetabs.com`, `r.jina.ai`), der die Seite holt und dem Browser zurückgibt. Mehr nicht: keine Haushaltsdaten, keine Kennung. Wer das nicht möchte, nimmt Screenshot oder Text.
+- **Rezept aus Screenshots:** Die Texterkennung läuft auf dem Gerät. Die Bilder verlassen es nicht und werden nicht gespeichert; gespeichert wird nur das Rezept, das ihr daraus macht.
 - Wo die Daten liegen: im Speicher des Browsers auf jedem Gerät und, mit Gruppen-Sync, in der Firestore-Datenbank am gewählten Standort. Programm, Schriften und Bibliotheken kommen aus diesem Repository, nicht von fremden Servern.
 - Ferienkasse und Home-Planer liegen unter derselben Adresse (`marcesss97.github.io`) und teilen sich im Browser einen Speicher. Sie kommen sich nicht in die Quere: Der Home-Planer schreibt nur Einträge, die mit `hp.` beginnen, und hat einen eigenen Zwischenspeicher für den Sync.
 
@@ -103,6 +121,7 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 - Die App vom Home-Bildschirm hat einen eigenen Speicher, getrennt von Safari. Sie beginnt deshalb leer.
 - Geteilte Haushalte holst du mit dem Einladungslink hinein: Link kopieren, in der App «Mit Link beitreten», einfügen.
 - Links aus dem Chat öffnet das iPhone in Safari, nicht in der App. Beides funktioniert und zeigt dieselben geteilten Haushalte.
+- Im Teilen-Menü des iPhones erscheint der Home-Planer nicht: Apple erlaubt das Web-Apps nicht. Rezepte kommen trotzdem hinein: Link kopieren und bei «Aus Link» einfügen, Screenshots bei «Screenshot» aus den Fotos wählen, oder Text kopieren und bei «Aus Text» einfügen.
 
 ## Anpassen und aktualisieren
 
@@ -110,6 +129,8 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 - Name und Farben: `manifest.webmanifest`, `index.html` und der Anfang von `style.css` (Farben als Variablen, hell und dunkel).
 - Kategorien der Kasse, Abteilungen und Stichwörter der Einkaufsliste, Arten von Terminen, Pflanzenbilder, Vorlagen der Infos, Bilder und Merkmale der Rezepte und Avatare: in `logic.js`.
 - Die eingebauten Kochideen: in `ideen.js`. Eine eigene Idee ist ein weiterer Eintrag nach demselben Muster.
+- Die typische Reihenfolge der Abteilungen bei Migros und Coop und die Adressen der Onlineshops: `STORES` in `logic.js`.
+- Die Lesedienste für Rezept-Links: `READERS` in `import.js`.
 
 | Datei | Aufgabe |
 |---|---|
@@ -118,6 +139,8 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 | `app.js` | Hülle: Liste der Haushalte, Übersicht, Navigation, Einladen, Einstellungen |
 | `ui.js` | Gemeinsame Bausteine der Oberfläche |
 | `kasse.js`, `einkauf.js`, `rezepte.js`, `kalender.js`, `pflanzen.js`, `infos.js` | Die sechs Bereiche |
+| `kochen.js` | Der Kochmodus |
+| `import.js` | Rezepte aus Links, Screenshots und Text erkennen |
 | `ideen.js` | Die eingebauten Kochideen |
 | `logic.js` | Rechnen und Prüfen: Aufteilen, Ausgleich, Statistik, Wiederholungen, Giessplan, Portionen umrechnen, Lesen gespeicherter Daten |
 | `store.js` | Speichern auf dem Gerät und im Gruppen-Sync |
@@ -125,12 +148,14 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 | `sw.js`, `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png`, `favicon.svg` | Installierbare App, Start ohne Netz |
 | `firestore.rules` | Sicherheitsregeln für die Firebase-Konsole (Home-Planer und Ferienkasse) |
 | `vendor-*.js`, `*.woff2` | Mitgelieferte Bibliotheken und Schriften, siehe `LICENSES.txt` |
+| `ocr/` | Texterkennung für Screenshots (Tesseract.js mit deutschem Sprachmodell); wird erst beim ersten Screenshot geladen |
 | `tests/` | Automatische Prüfungen (werden von der App nicht geladen) |
 
 ## Tests
 
 ```sh
 node tests/logic.test.js          # Rechenlogik, ohne Browser
+node tests/import.test.js         # Rezepte erkennen, Timer finden, Reihenfolge der Läden, ohne Browser
 npm install playwright            # einmalig, für den Browser-Test
 node tests/e2e.test.js            # die ganze App in Chromium, mit nachgebautem Sync-Server und zwei Handys
 ```
@@ -140,16 +165,19 @@ node tests/e2e.test.js            # die ganze App in Chromium, mit nachgebautem 
 Geprüft, automatisch und wiederholbar:
 
 - Die Rechenlogik mit Tausenden Zufallsfällen: Aufteilen auf den Rappen genau, Salden und Abrechnung (alle sind danach quitt, höchstens so viele Zahlungen wie nötig), Lesen von Beträgen, Statistik pro Monat, Wiederholungen im Kalender gegen eine Nachzählung Tag für Tag, Giessplan, Abteilungen und Mengen der Einkaufsliste, Portionen umrechnen, Suche nach Zutaten, Vollständigkeit aller Kochideen, und der Umgang mit unsinnigen oder manipulierten Daten (etwa Links mit `javascript:`).
-- Die ganze App in Chromium in 21 Schritten: Haushalt anlegen, jeder Bereich mit seinen Formularen (bei den Rezepten: würfeln, Portionen, Einkaufsliste, übernehmen, einplanen, Kühlschrank-Suche), Neuladen, Zurück-Taste, Personen und Avatare, Sicherung herunterladen und einlesen, Löschen, schmale Handys mit 320 Pixeln. Der Gruppen-Sync mit einem nachgebauten Firestore-Server und zwei getrennten Handys: beitreten, Einträge (auch Rezepte) erscheinen gegenseitig, gleichzeitige Änderungen, für alle löschen, fehlende Regeln, fehlende Datenbank, einen Haushalt vom Gerät freigeben. Dazu ein Start mit der echten Firebase-Bibliothek ohne Netz.
+- Das Erkennen von Rezepten an nachgebauten Seiten nach dem Muster von Fooby, Migusto, Chefkoch und Instagram (`tests/fixtures/`), an Screenshot-Text mit typischen Lesefehlern und an Beschreibungen ohne Überschriften; das Durchprobieren der Lesedienste, wenn einer ausfällt; Zeitangaben in Schritten («5 bis 8 Minuten», «1½ Stunden», «Viertelstunde»); die Reihenfolge der Abteilungen.
+- Die ganze App in Chromium in 25 Schritten: Haushalt anlegen, jeder Bereich mit seinen Formularen (bei den Rezepten: würfeln, Portionen, Einkaufsliste, übernehmen, einplanen, Kühlschrank-Suche; Rezept aus einem Link, aus Text und aus einem echten Bild mit der Texterkennung; Kochmodus mit Timer, Klingeln und Stoppen; Teilen an die App über den Service Worker; Einkaufsliste für Migros und Coop mit eigener Reihenfolge), Neuladen, Zurück-Taste, Personen und Avatare, Sicherung herunterladen und einlesen, Löschen, schmale Handys mit 320 Pixeln. Der Gruppen-Sync mit einem nachgebauten Firestore-Server und zwei getrennten Handys: beitreten, Einträge (auch Rezepte) erscheinen gegenseitig, gleichzeitige Änderungen, für alle löschen, fehlende Regeln, fehlende Datenbank, einen Haushalt vom Gerät freigeben. Dazu ein Start mit der echten Firebase-Bibliothek ohne Netz.
 
 Nicht geprüft, weil es von hier aus nicht möglich war:
 
 - der Betrieb mit dem echten Firebase-Projekt und den Regeln aus `firestore.rules`,
-- echte iPhones und Android-Handys (Installieren, Teilen-Menü, Aussehen der Emojis),
+- echte iPhones und Android-Handys (Installieren, Teilen-Menü, Aussehen der Emojis, Bildschirm-bleibt-an, Vorlesen, Vibrieren),
+- echte Rezeptseiten und die öffentlichen Lesedienste: Sie waren von hier aus nicht erreichbar, geprüft ist mit nachgebauten Seiten. Ändert eine Seite ihren Aufbau oder fällt ein Lesedienst weg, hilft der Weg über Screenshot oder Text,
+- die Texterkennung an echten Handy-Screenshots (geprüft mit einem in Chromium gezeichneten Rezeptbild),
 - die Veröffentlichung auf GitHub Pages selbst.
 
 Dafür ist der [Probelauf](#3-probelauf) da.
 
 ## Lizenzen
 
-Die mitgelieferten Bibliotheken und Schriften stehen unter freien Lizenzen: Firebase JavaScript SDK und htm (Apache 2.0), Preact und qrcode-generator (MIT), die Schriften Fredoka, Anton und IBM Plex Mono (SIL Open Font License 1.1). Die Emojis zeichnet jedes Gerät mit seiner eigenen Emoji-Schrift. Die vollständigen Angaben und Texte stehen in [`LICENSES.txt`](LICENSES.txt).
+Die mitgelieferten Bibliotheken und Schriften stehen unter freien Lizenzen: Firebase JavaScript SDK und htm (Apache 2.0), Preact und qrcode-generator (MIT), Tesseract.js mit Tesseract OCR und dem deutschen Sprachmodell (Apache 2.0; darin Leptonica, libjpeg der Independent JPEG Group, libpng, zlib, libtiff und libwebp unter ihren freien Lizenzen), die Schriften Fredoka, Anton und IBM Plex Mono (SIL Open Font License 1.1). Die Emojis zeichnet jedes Gerät mit seiner eigenen Emoji-Schrift. Die vollständigen Angaben und Texte stehen in [`LICENSES.txt`](LICENSES.txt).

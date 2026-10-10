@@ -552,9 +552,9 @@ window.HP = (function () {
   var SHOP_WORDS = {
     produce: "apfel äpfel banane birne orange zitrone limette traube beere erdbeer himbeer heidelbeer kiwi mango ananas melone salat gurke tomate rüebli karotte peperoni paprika zwiebel knoblauch kartoffel härdöpfel lauch zucchetti zucchini aubergine brokkoli broccoli blumenkohl kohl spinat pilz champignon avocado ingwer kräuter basilikum petersilie schnittlauch koriander fenchel sellerie kürbis radiesli frucht früchte gemüse obst nektarine pfirsich aprikose zwetschge kirsche",
     bakery: "brot zopf gipfeli weggli brötchen toast baguette ciabatta croissant kuchen tortilla wrap fladen",
-    dairy: "milch käse joghurt jogurt yoghurt butter rahm quark mozzarella parmesan gruyère feta eier mascarpone ricotta hüttenkäse crème creme fraîche fraiche skyr",
-    meat: "fleisch poulet huhn hähnchen rind schwein hack wurst cervelat salami schinken speck lachs thon fisch crevetten steak filet plätzli bratwurst geschnetzeltes",
-    pantry: "pasta teigwaren spaghetti nudeln penne hörnli reis risotto mehl zucker salz pfeffer öl olivenöl essig gewürz konserve bohnen linsen kichererbsen sauce sosse ketchup senf mayo honig konfi marmelade müesli muesli haferflocken cornflakes kaffee tee bouillon tomatenpüree passata nüsse mandeln couscous quinoa tofu hefe backpulver sesam kokosmilch currypaste maizena tortilla",
+    dairy: "milch käse joghurt jogurt yoghurt butter rahm quark mozzarella parmesan pecorino gruyère emmentaler appenzeller sbrinz vacherin raclettekäse feta eier mascarpone ricotta hüttenkäse crème creme fraîche fraiche skyr sauerrahm",
+    meat: "fleisch poulet huhn hähnchen rind schwein kalb lamm hack wurst cervelat salami schinken speck guanciale pancetta chorizo lachs thon fisch forelle crevetten steak filet plätzli bratwurst geschnetzeltes",
+    pantry: "pasta teigwaren spaghetti nudeln penne hörnli reis risotto mehl zucker salz pfeffer öl olivenöl essig gewürz konserve bohnen linsen kichererbsen sauce sosse ketchup senf mayo honig konfi marmelade müesli muesli haferflocken cornflakes kaffee tee bouillon tomatenpüree passata nüsse mandeln couscous quinoa tofu hefe backpulver sesam kokosmilch currypaste maizena tortilla magronen makkaroni lasagne gnocchi brühe gemüsebrühe apfelmus tomatenmark polenta bulgur paniermehl",
     frozen: "tiefkühl glace pizza pommes eiswürfel edamame",
     drinks: "wasser mineral saft apfelsaft orangensaft bier wein rotwein weisswein prosecco cola eistee sirup limonade rivella kombucha milchdrink",
     sweets: "schoggi schokolade chips guetzli keks bonbon gummibär snack popcorn riegel praline nutella",
@@ -797,6 +797,80 @@ window.HP = (function () {
     words.forEach(function (w) { if (hay.indexOf(w) >= 0) hits.push(w); });
     return { score: hits.length, hits: hits };
   }
+  /* ---------- Kochmodus ---------- */
+  /* Zeitangaben in einem Arbeitsschritt: "10 Minuten", "5 bis 8 Min.", "1½ Stunden", "eine halbe Stunde", "Viertelstunde".
+     Ergebnis: [{ secs, label }], bei einer Spanne mit der kürzeren Zeit (lieber einmal zu früh nachschauen). */
+  var WORDNUM = { ein: 1, eine: 1, einen: 1, einem: 1, einer: 1, zwei: 2, drei: 3, vier: 4, "fünf": 5, sechs: 6, sieben: 7, acht: 8, neun: 9, zehn: 10, elf: 11, "zwölf": 12,
+    "fünfzehn": 15, zwanzig: 20, dreissig: 30, "dreißig": 30, vierzig: 40, "fünfzig": 50, sechzig: 60 };
+  var DNUM = "(\\d+(?:[.,]\\d+)?\\s*[½¼¾]?|[½¼¾]|" + Object.keys(WORDNUM).sort(function (a, b) { return b.length - a.length; }).join("|") + ")";
+  var DUR = new RegExp(DNUM + "(?:\\s*(?:bis|-|–|oder)\\s*" + DNUM + ")?\\s*(stunden|stunde|std\\.?|h|minuten|minute|min\\.?|sekunden|sekunde|sek\\.?)(?![a-zäöü])", "gi");
+  function durNum(t) {
+    t = t.toLowerCase().trim();
+    if (WORDNUM[t] !== undefined) return WORDNUM[t];
+    var frac = 0, m = /([½¼¾])$/.exec(t);
+    if (m) { frac = FRAC[m[1]]; t = t.slice(0, -1).trim(); }
+    var v = t ? Number(t.replace(",", ".")) : 0;
+    return isFinite(v) ? v + frac : null;
+  }
+  function durations(text) {
+    var s = String(text || ""), out = [], seen = Object.create(null), m;
+    if (/viertelstunde/i.test(s)) out.push({ secs: 900, label: "15 Min." });
+    if (/halbe[n]?\s+stunde/i.test(s)) out.push({ secs: 1800, label: "30 Min." });
+    DUR.lastIndex = 0;
+    while ((m = DUR.exec(s))) {
+      var a = durNum(m[1]), unit = m[3].toLowerCase(), f = /^(st|h)/.test(unit) ? 3600 : /^s/.test(unit) ? 1 : 60;
+      if (!(a > 0)) continue;
+      var secs = Math.round(a * f);
+      if (secs > 48 * 3600 || seen[secs]) continue;
+      seen[secs] = 1;
+      out.push({ secs: secs, label: secsLabel(secs) });
+    }
+    return out.slice(0, 4);
+  }
+  function secsLabel(secs) {
+    if (secs < 60) return secs + " Sek.";
+    if (secs < 3600) return Math.round(secs / 60) + " Min.";
+    var h = Math.floor(secs / 3600), mm = Math.round((secs % 3600) / 60);
+    return h + " Std." + (mm ? " " + mm + " Min." : "");
+  }
+  /* Welche Zutaten kommen in einem Schritt vor? Verglichen werden die Hauptwörter der Zutat (gross geschrieben) mit den
+     Wörtern des Schritts, über die ersten fünf Buchstaben: "Knoblauchzehen" passt zu "Knoblauch", "Zwiebeln" zu "Zwiebel". */
+  function nounsOf(line) {
+    var n = splitQty(line).name.replace(/\(.*?\)/g, " ").split(",")[0];
+    return n.split(/[\s/-]+/).filter(function (w) { return /^[A-ZÄÖÜ][a-zäöüßèéàâêç]{2,}/.test(w); }).map(function (w) { return w.toLowerCase(); });
+  }
+  function stepIngredients(step, lines) {
+    var words = String(step || "").toLowerCase().split(/[^a-zäöüßèéàâêç]+/).filter(function (w) { return w.length >= 4; });
+    var out = [];
+    (lines || []).forEach(function (line, i) {
+      var hit = nounsOf(line).some(function (n) {
+        var a = n.slice(0, 5);
+        /* auch Kurzformen zusammengesetzter Wörter: «Magronen» für «Älplermagronen», «Tomaten» für «Cherrytomaten» */
+        return words.some(function (w) { return w.slice(0, 5) === a || (n.length >= 5 && w.indexOf(n) === 0) || (w.length >= 5 && n.length > w.length && n.slice(-w.length) === w); });
+      });
+      if (hit) out.push(i);
+    });
+    return out;
+  }
+
+  /* ---------- Läden ---------- */
+  /* Typische Reihenfolge der Abteilungen, vom Eingang zur Kasse. Jede Filiale ist anders: Der Haushalt kann sie anpassen. */
+  var STORES = [
+    { id: "migros", label: "Migros", search: "https://www.migros.ch/de/search?query=",
+      order: ["produce", "bakery", "dairy", "meat", "pantry", "sweets", "drinks", "frozen", "care", "clean", "other"] },
+    { id: "coop", label: "Coop", search: "https://www.coop.ch/de/search/?text=",
+      order: ["produce", "bakery", "meat", "dairy", "frozen", "pantry", "sweets", "drinks", "care", "clean", "other"] }
+  ];
+  function storeOf(id) { return STORES.filter(function (x) { return x.id === id; })[0] || null; }
+  /* Reihenfolge der Abteilungen für einen Laden: die gespeicherte des Haushalts, ergänzt um neue Abteilungen. */
+  function aisleOrder(home, store) {
+    var st = storeOf(store), saved = home && home.aisles && Array.isArray(home.aisles[store]) ? home.aisles[store] : null;
+    var base = (saved || (st ? st.order : SHOP.map(function (x) { return x.id; }))).filter(function (id) { return shopT.has(id); });
+    var out = [];
+    base.concat(SHOP.map(function (x) { return x.id; })).forEach(function (id) { if (out.indexOf(id) < 0) out.push(id); });
+    return out;
+  }
+
   /* Die eingebauten Kochideen stehen in ideen.js. Sie werden einmal gelesen und wie gespeicherte Rezepte geprüft. */
   var ideaCache = null;
   function ideas() {
@@ -827,7 +901,13 @@ window.HP = (function () {
       if (m && typeof m === "object" && okId(k)) members[k] = { name: text(m.name, 60).trim() || "?", c: Math.abs(Math.round(num0(m.c))) % 1000, o: num0(m.o), gone: !!m.gone, a: isAvatar(m.a) ? m.a : "" };
     }
     if (d.rates && typeof d.rates === "object") for (k in d.rates) if (okRate(d.rates[k]) && /^[A-Z]{3}$/.test(k)) rates[k] = d.rates[k];
-    return { id: id, name: text(d.name, 80).trim() || "Haushalt", base: d.base, rates: rates, members: members, created: num0(d.created) };
+    var aisles = {};
+    if (d.aisles && typeof d.aisles === "object") STORES.forEach(function (st) {
+      var a = d.aisles[st.id];
+      if (Array.isArray(a)) aisles[st.id] = a.filter(function (x) { return shopT.has(x); }).slice(0, 20);
+    });
+    return { id: id, name: text(d.name, 80).trim() || "Haushalt", base: d.base, rates: rates, members: members, created: num0(d.created),
+      store: storeOf(d.store) ? d.store : "", aisles: aisles };
   }
   function normExpense(id, d) {
     if (!d || typeof d !== "object" || !posNum(d.amount) || typeof d.cur !== "string" || !/^[A-Z]{3}$/.test(d.cur)) return null;
@@ -918,6 +998,7 @@ window.HP = (function () {
     PLANTS: PLANTS, isPlantEmoji: isPlantEmoji, plantEmoji: plantEmoji, plantDue: plantDue, feedDue: feedDue, careFields: careFields, normPlant: normPlant,
     INFO_CATS: INFO_CATS, infoCat: infoT.get, okUrl: okUrl, dueOf: dueOf, normInfo: normInfo,
     DISHES: DISHES, isDish: isDish, dishEmoji: dishEmoji, RECIPE_CATS: RECIPE_CATS, recipeCat: recT.get, RECIPE_TAGS: RECIPE_TAGS, recipeTag: tagT.get, hasTag: hasTag,
+    durations: durations, secsLabel: secsLabel, stepIngredients: stepIngredients, STORES: STORES, storeOf: storeOf, aisleOrder: aisleOrder,
     isStaple: isStaple, scaleLine: scaleLine, searchWords: searchWords, recipeMatch: recipeMatch, normRecipe: normRecipe, ideas: ideas, idea: idea,
     okId: okId, hash: hash
   };

@@ -1,10 +1,10 @@
 /* Home-Planer: Service Worker. Hält eine Kopie der App-Dateien bereit, damit der Home-Planer auch ohne Netz startet.
    Mit Netz fragt er bei jedem Start nach, ob es auf dem Server eine neuere Fassung gibt (so wirkt eine geänderte config.js sofort).
    Ohne Netz oder bei sehr langsamem Netz kommt die gespeicherte Kopie. Daten und Kurse laufen nicht über diese Kopie. */
-const CACHE = "homeplaner-v2";
+const CACHE = "homeplaner-v3";
 const FILES = [
-  "./", "index.html", "style.css", "config.js", "logic.js", "ideen.js", "store.js", "rates.js", "ui.js",
-  "kasse.js", "einkauf.js", "kalender.js", "pflanzen.js", "infos.js", "rezepte.js", "app.js",
+  "./", "index.html", "style.css", "config.js", "logic.js", "ideen.js", "import.js", "store.js", "rates.js", "ui.js",
+  "kasse.js", "einkauf.js", "kalender.js", "pflanzen.js", "infos.js", "rezepte.js", "kochen.js", "app.js",
   "vendor-preact.js", "vendor-qrcode.js", "vendor-firebase.js", "manifest.webmanifest", "favicon.svg",
   "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png",
   "fredoka-var.woff2", "anton-400.woff2", "ibm-plex-mono-500.woff2", "ibm-plex-mono-600.woff2"
@@ -27,8 +27,24 @@ self.addEventListener("activate", event => {
   );
 });
 
+/* «Teilen» aus einer anderen App (Android): Link, Text und Screenshots kommen hier an, werden kurz abgelegt, und die App
+   öffnet sich mit dem Import. Der Ablageort heisst bewusst nicht "homeplaner-…", damit das Aufräumen oben ihn nicht löscht. */
+const SHARE = "hp-share";
+async function receiveShare(req) {
+  try {
+    const form = await req.formData(), cache = await caches.open(SHARE);
+    await Promise.all((await cache.keys()).map(k => cache.delete(k)));
+    const files = form.getAll("images").filter(f => f && typeof f === "object" && f.size > 0).slice(0, 8);
+    await Promise.all(files.map((f, i) => cache.put("shared/" + i, new Response(f, { headers: { "Content-Type": f.type || "image/png" } }))));
+    await cache.put("shared/meta", new Response(JSON.stringify({ title: String(form.get("title") || ""), text: String(form.get("text") || ""), url: String(form.get("url") || ""), n: files.length, at: Date.now() }),
+      { headers: { "Content-Type": "application/json" } }));
+  } catch (e) { /* die App öffnet sich trotzdem */ }
+  return Response.redirect(new URL("./#teilen", self.location).href, 303);
+}
+
 self.addEventListener("fetch", event => {
   const req = event.request;
+  if (req.method === "POST" && new URL(req.url).pathname.endsWith("/share-target")) { event.respondWith(receiveShare(req)); return; }
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;          // Daten und Kurse gehen direkt ins Netz

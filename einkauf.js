@@ -69,15 +69,38 @@
       </div>`;
   }
 
+  /* The open items as text, aisle by aisle in the order of the chosen store: for a message or a note. */
+  function listText(home, list, store) {
+    const st = HP.storeOf(store), g = {};
+    list.filter(it => !it.done).forEach(it => { (g[it.sec] || (g[it.sec] = [])).push(it); });
+    const L = ["Einkaufsliste" + (st ? " für " + st.label : "") + " · " + home.name, ""];
+    HP.aisleOrder(home, store).forEach(id => {
+      if (!g[id]) return;
+      const sec = HP.shopSec(id);
+      L.push(sec.emoji + " " + sec.label);
+      g[id].sort((a, b) => a.ts - b.ts).forEach(it => L.push("• " + it.name + (it.qty ? " (" + it.qty + ")" : "") + (it.note ? " – " + it.note : "")));
+      L.push("");
+    });
+    return L.join("\n").trim();
+  }
+
   function Shopping({ ctx }) {
-    const { data, act, open, say, who } = ctx;
-    const list = data.shopping;
+    const { data, act, open, say, who, home } = ctx;
+    const list = data.shopping, store = home.store || "";
     const [busy, run] = useBusy();
+    const [box, setBox] = useState(null);
     const groups = useMemo(() => {
       const g = {};
       (list || []).filter(it => !it.done).forEach(it => { (g[it.sec] || (g[it.sec] = [])).push(it); });
-      return HP.SHOP.filter(s => g[s.id]).map(s => ({ s, items: g[s.id].sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1)) }));
-    }, [list]);
+      return HP.aisleOrder(home, store).filter(id => g[id]).map(id => ({ s: HP.shopSec(id), items: g[id].sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1)) }));
+    }, [list, home, store]);
+    const setStore = id => { if (id !== store) act.patchHome(home.id, { store: id }); };
+    const canShare = typeof navigator.share === "function";
+    const share = () => {
+      const text = listText(home, list || [], store);
+      if (canShare) navigator.share({ text }).catch(() => {});
+      else U.copyText(text, () => { setBox(null); say("Liste kopiert."); }, setBox);
+    };
     const done = useMemo(() => (list || []).filter(it => it.done).sort((a, b) => b.doneAt - a.doneAt), [list]);
     const nOpen = (list || []).length - done.length;
     const clear = () => run(async () => {
@@ -87,6 +110,14 @@
     return html`
       <${U.TabHead} emoji="🛒" title="Einkaufsliste">${list && html`<span class="tab-head-n">${nOpen === 0 ? "alles da" : nOpen === 1 ? "1 offen" : nOpen + " offen"}</span>`}<//>
       <${QuickAdd} ctx=${ctx} />
+      <div class="store-row">
+        <div class="seg onbg" role="radiogroup" aria-label="Einkaufen bei">
+          <button type="button" role="radio" aria-checked=${String(!store)} aria-pressed=${String(!store)} onClick=${() => setStore("")}>Egal wo</button>
+          ${HP.STORES.map(st => html`<button type="button" key=${st.id} role="radio" aria-checked=${String(store === st.id)} aria-pressed=${String(store === st.id)} onClick=${() => setStore(st.id)}>${st.label}</button>`)}
+        </div>
+        ${store && html`<button type="button" class="btn small ghost" onClick=${() => open({ t: "aisles" })}><${Icon} n="sliders" s=${16} />Reihenfolge</button>`}
+      </div>
+      ${store && html`<p class="hint">Die Abteilungen stehen in der Reihenfolge wie im ${HP.storeOf(store).label}. Passt sie nicht zu eurer Filiale, ändert ihr sie unter «Reihenfolge». Ein Tipp auf einen Artikel sucht ihn im Onlineshop.</p>`}
       ${list === null && html`<p class="status" role="status">Liste wird geladen …</p>`}
       ${list && !list.length && html`<${Empty} emoji="🧺" title="Die Liste ist leer" text="Schreib oben hinein, was fehlt. Mengen gehen gleich mit («3 Joghurt», «Äpfel 1kg»), und jeder Artikel landet in seiner Abteilung. Im Laden tippst du ihn ab." />`}
       ${list && list.length > 0 && nOpen === 0 && html`<section class="panel"><p class="done-all"><span class="emo" aria-hidden="true">🎉</span>Alles erledigt. Der Kühlschrank dankt.</p></section>`}
@@ -95,6 +126,11 @@
           <h2 class="aisle"><span class="emo" aria-hidden="true">${g.s.emoji}</span>${g.s.label}<span class="aisle-n">${g.items.length}</span></h2>
           <div class="list">${g.items.map(it => html`<${Row} key=${it.id} it=${it} ctx=${ctx} who=${who} />`)}</div>
         </section>`)}
+      ${nOpen > 0 && html`
+        <div class="btn-row">
+          <button type="button" class="btn small" onClick=${share}><${Icon} n=${canShare ? "share" : "copy"} s=${16} />Liste ${canShare ? "teilen" : "kopieren"}</button>
+        </div>`}
+      ${box && html`<div class="field"><label for="hp-shop-copy">Kopieren hat nicht geklappt. Markiere den Text und kopiere ihn von Hand.</label><textarea id="hp-shop-copy" class="copybox" readonly value=${box} onFocus=${e => e.target.select()}></textarea></div>`}
       ${done.length > 0 && html`
         <section class="stack">
           <h2 class="aisle"><span class="emo" aria-hidden="true">✅</span>Im Wagen<span class="aisle-n">${done.length}</span></h2>
@@ -108,7 +144,8 @@
   }
 
   function ItemSheet({ ctx, it, onClose }) {
-    const { act, say, who } = ctx;
+    const { act, say, who, home } = ctx;
+    const shops = home.store ? [HP.storeOf(home.store)] : HP.STORES;
     const [d, setD] = useState({ name: it.name, qty: it.qty, sec: it.sec, note: it.note });
     const [err, setErr] = useState(null);
     const [busy, run] = useBusy();
@@ -135,6 +172,11 @@
           <label for="hp-it-note">Notiz</label>
           <input id="hp-it-note" class="input" maxlength="200" placeholder="z. B. die laktosefreie" value=${d.note} onInput=${e => set({ note: e.target.value })} />
         </div>
+        <div class="field">
+          <span class="label">Im Onlineshop suchen</span>
+          <div class="btn-row">${shops.map(st => html`<a key=${st.id} class="btn small" href=${st.search + encodeURIComponent(d.name.trim() || it.name)} target="_blank" rel="noopener noreferrer"><${Icon} n="ext" s=${16} />${st.label}</a>`)}</div>
+          <p class="hint">Zeigt Sorten und Preise. Gekauft wird dort nichts automatisch.</p>
+        </div>
         <div class="foot">
           <button type="button" class="btn primary block" disabled=${busy} onClick=${save}>Speichern</button>
           <${DeleteButton} label="Artikel löschen" onConfirm=${del} disabled=${busy} />
@@ -143,5 +185,34 @@
       <//>`;
   }
 
-  Object.assign(U, { Shopping, ItemSheet, ShopQuickAdd: QuickAdd });
+  /* The order of the aisles for the chosen store, saved for the whole household. */
+  function AislesSheet({ ctx, onClose }) {
+    const { act, say, home } = ctx;
+    const store = home.store, st = HP.storeOf(store);
+    const [order, setOrder] = useState(() => HP.aisleOrder(home, store));
+    const [busy, run] = useBusy();
+    const move = (k, dir) => { const o = order.slice(), j = k + dir; if (j < 0 || j >= o.length) return; const x = o[k]; o[k] = o[j]; o[j] = x; setOrder(o); };
+    const save = () => run(async () => { if (await act.patchHome(home.id, { aisles: { [store]: order } })) { onClose(); say("Reihenfolge für " + st.label + " gespeichert."); } });
+    const reset = () => setOrder(st.order.slice());
+    if (!st) return null;
+    return html`
+      <${Sheet} title=${"Reihenfolge im " + st.label} onClose=${onClose} action=${html`<button type="button" class="btn primary small" disabled=${busy} onClick=${save}>Speichern</button>`}>
+        <p class="hint">Vom Eingang bis zur Kasse: So sortiert die Einkaufsliste die Abteilungen, wenn ihr im ${st.label} einkauft. Die Reihenfolge gilt für den ganzen Haushalt.</p>
+        <div class="rows">${order.map((id, k) => {
+          const sec = HP.shopSec(id);
+          return html`
+            <div class="row" key=${id}>
+              <span class="emo" aria-hidden="true">${sec.emoji}</span><span class="grow">${sec.label}</span>
+              <button type="button" class="icon-btn" aria-label=${sec.label + " nach oben"} disabled=${k === 0} onClick=${() => move(k, -1)}><${Icon} n="back" s=${18} /></button>
+              <button type="button" class="icon-btn" aria-label=${sec.label + " nach unten"} disabled=${k === order.length - 1} onClick=${() => move(k, 1)}><${Icon} n="next" s=${18} /></button>
+            </div>`;
+        })}</div>
+        <div class="foot">
+          <button type="button" class="btn primary block" disabled=${busy} onClick=${save}>Speichern</button>
+          <button type="button" class="btn block" onClick=${reset}>Typische Reihenfolge</button>
+        </div>
+      <//>`;
+  }
+
+  Object.assign(U, { Shopping, ItemSheet, AislesSheet, ShopQuickAdd: QuickAdd, shopListText: listText });
 })();

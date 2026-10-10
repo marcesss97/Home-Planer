@@ -5,6 +5,8 @@
 "use strict";
 const http = require("http"), fs = require("fs"), path = require("path"), assert = require("assert");
 let chromium;
+/* Requests of the service worker go through the same routes as those of the page (config.js without Firebase). */
+process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS = "1";
 try { ({ chromium } = require(process.env.PLAYWRIGHT || "playwright")); }
 catch (e) { console.error("Playwright fehlt: npm install playwright, oder PLAYWRIGHT=/pfad/zu/playwright setzen."); process.exit(2); }
 
@@ -58,8 +60,9 @@ const docsUnder = hid => Object.keys(FS.db).filter(k => k.indexOf("homes/" + hid
 
 /* ---------- devices ---------- */
 let browser, BASE;
-async function device({ cloud, width, dark } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: width || 390, height: 844 }, locale: "de-CH", timezoneId: "Europe/Zurich", colorScheme: dark ? "dark" : "light", acceptDownloads: true, serviceWorkers: "block" });
+async function device({ cloud, width, dark, sw } = {}) {
+  const ctx = await browser.newContext({ viewport: { width: width || 390, height: 844 }, locale: "de-CH", timezoneId: "Europe/Zurich", colorScheme: dark ? "dark" : "light", acceptDownloads: true,
+    serviceWorkers: sw ? "allow" : "block", permissions: ["clipboard-read", "clipboard-write"] });
   if (cloud) {
     await ctx.exposeBinding("__fs", (src, op, arg) => fsOp(op, arg));
     await ctx.route("**/vendor-firebase.js", r => r.fulfill({ contentType: "application/javascript", body: fs.readFileSync(path.join(__dirname, "fake-firestore.js"), "utf8") }));
@@ -389,6 +392,164 @@ step("Rezepte: Kochidee, Portionen, Einkaufsliste, übernehmen, einplanen, Kühl
   await A.click("text=Aus dem Plan");
   await toast(A, /Aus dem Wochenplan genommen/);
 });
+/* A recipe site that does not let the browser read it, and a reader that does: played from a test page. */
+const FOOBY = fs.readFileSync(path.join(__dirname, "fixtures", "fooby-artig.html"), "utf8");
+async function readerRoute(p) {
+  await p.context().route(/^https:\/\/api\.allorigins\.win\//, r => r.fulfill({ status: 200, contentType: "text/html", headers: { "Access-Control-Allow-Origin": "*" }, body: FOOBY }));
+}
+/* A screenshot of a recipe, drawn in the page: what a phone would hand over. */
+async function recipePng(p, file) {
+  const b64 = await p.evaluate(() => {
+    const c = document.createElement("canvas"); c.width = 750; c.height = 1050; const g = c.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, 750, 1050); g.fillStyle = "#222";
+    const L = [["bold 40px Arial", "Spaghetti Carbonara"], ["26px Arial", "20 Min. | 2 Portionen"], ["", ""], ["bold 30px Arial", "Zutaten"], ["28px Arial", "200 g Spaghetti"], ["28px Arial", "100 g Guanciale"],
+      ["28px Arial", "2 Eier"], ["28px Arial", "50 g Pecorino, gerieben"], ["28px Arial", "Pfeffer"], ["", ""], ["bold 30px Arial", "Zubereitung"], ["26px Arial", "1. Spaghetti in Salzwasser 9 Minuten kochen."],
+      ["26px Arial", "2. Guanciale in Streifen schneiden und knusprig"], ["26px Arial", "braten."], ["26px Arial", "3. Eier mit Pecorino verquirlen, unter die"], ["26px Arial", "Pasta ziehen und sofort servieren."]];
+    let y = 70; L.forEach(([f, t]) => { if (f) g.font = f; g.fillText(t, 40, y); y += 56; });
+    return c.toDataURL("image/png").split(",")[1];
+  });
+  fs.writeFileSync(file, Buffer.from(b64, "base64"));
+  return b64;
+}
+const TMP = require("os").tmpdir();
+let K;
+step("Rezept aus einem Link: prüfen, speichern, Kochmodus mit Portionen, Timer und Wecker", async () => {
+  K = await device();
+  await K.clock.install();
+  await readerRoute(K);
+  await K.goto(BASE);
+  await createHome(K, "Küche Test", ["Marc", "Lea"]);
+  await tab(K, "recipes");
+  await K.click('.qa:has-text("Aus Link")');
+  await K.fill("#hp-imp-link", "Schau mal: https://fooby.ch/de/rezepte/12345/aelplermagronen");
+  await K.click(".sheet .foot >> text=Rezept holen");
+  await K.locator('.sheet-head:has-text("Rezept prüfen")').waitFor({ timeout: 30000 });
+  assert.match(await K.inputValue("#hp-rc-ingr"), /150 g Gruyère, gerieben/);
+  assert.strictEqual(await K.inputValue("#hp-rc-title"), "Älplermagronen mit Apfelmus & Zwiebeln");
+  assert.strictEqual(await K.inputValue("#hp-rc-link"), "https://fooby.ch/de/rezepte/12345/aelplermagronen");
+  await save(K);
+  await K.locator(".note.fresh").waitFor();
+  await K.click("text=Kochmodus starten");
+  await K.locator(".cook").waitFor();
+  await sees(K, "Zuerst bereitstellen");
+  await K.click('.cook [aria-label="Eine Portion mehr"]');
+  await sees(K, "500 g Kartoffeln, mehligkochend");
+  await K.click(".cook-nav >> text=Los geht's");
+  await sees(K, "Schritt 1 von 4");
+  await K.keyboard.press("ArrowRight");
+  await sees(K, "Schritt 2 von 4");
+  assert.match(await K.locator(".cook-uses").innerText(), /Kartoffeln/);
+  await K.click(".timer-btn:has-text('12 Min.')");
+  await K.locator(".ctimer", { hasText: "Schritt 2 · 12 Min." }).waitFor();
+  await K.clock.fastForward("12:05");
+  await K.locator(".ctimer.up", { hasText: "Zeit ist um!" }).waitFor();
+  await K.click('.ctimer.up button:has-text("OK")');
+  await K.locator(".ctimer").waitFor({ state: "detached" });
+  await K.click(".timer-btn");
+  await K.click('.cook-head [aria-label="Kochmodus beenden"]');
+  await K.locator(".cook-warn").waitFor();
+  await K.keyboard.press("ArrowRight"); await K.keyboard.press("ArrowRight"); await K.keyboard.press("ArrowRight");
+  await sees(K, "Fertig! En Guete");
+  await K.click("text=Als gekocht merken");
+  await toast(K, /En Guete/);
+  await K.locator(".cook").waitFor({ state: "detached" });
+  await K.locator('.sheet button:has-text("Heute gekocht")[disabled]').waitFor();
+  await K.click(".sheet-head >> text=Fertig"); await noSheet(K);
+});
+step("Rezept aus Text und aus einem Screenshot (Texterkennung auf dem Gerät)", async () => {
+  await K.click('.qa:has-text("Aus Text")');
+  await K.fill("#hp-imp-text", fs.readFileSync(path.join(__dirname, "fixtures", "caption-ohne-titel.txt"), "utf8"));
+  await K.click(".sheet .foot >> text=Rezept erstellen");
+  await K.locator('.sheet-head:has-text("Rezept prüfen")').waitFor();
+  assert.strictEqual(await K.inputValue("#hp-rc-title"), "Kürbissuppe");
+  await K.click(".sheet-head >> text=Abbrechen"); await noSheet(K);
+  await K.click('.qa:has-text("Screenshot")');
+  const file = path.join(TMP, "homeplaner-carbonara.png");
+  await recipePng(K, file);
+  await K.setInputFiles("#hp-imp-file", file);
+  await K.locator('.sheet-head:has-text("Rezept prüfen")').waitFor({ timeout: 90000 });
+  assert.strictEqual(await K.inputValue("#hp-rc-title"), "Spaghetti Carbonara");
+  const ingr = await K.inputValue("#hp-rc-ingr");
+  ["200 g Spaghetti", "100 g Guanciale", "2 Eier", "50 g Pecorino, gerieben"].forEach(x => assert.ok(ingr.indexOf(x) >= 0, "ingredient " + x + " in\n" + ingr));
+  assert.strictEqual((await K.inputValue("#hp-rc-steps")).split("\n").length, 3);
+  await K.click("details.raw summary");
+  await sees(K, "Zubereitung");
+  await save(K);
+  await K.locator('.sheet-head:has-text("Spaghetti Carbonara")').waitFor();
+  await K.click('.sheet .btn.primary:has-text("Einkaufsliste")');
+  await toast(K, /Zutaten auf der Einkaufsliste/);
+  await K.click(".sheet-head >> text=Fertig"); await noSheet(K);
+});
+step("Einkaufsliste für Migros oder Coop: Reihenfolge, Onlineshop, Liste teilen", async () => {
+  await tab(K, "shop");
+  await K.fill("#hp-shop-q", "Tiefkühlpizza"); await K.keyboard.press("Enter");
+  await K.locator('[aria-label="Tiefkühlpizza abhaken"]').waitFor();
+  await K.click('.store-row [role=radio]:has-text("Migros")');
+  await sees(K, "wie im Migros");
+  await K.click("text=Reihenfolge");
+  for (let k = 0; k < 8; k++) { const b = K.locator('[aria-label="Tiefkühl nach oben"]'); if (await b.isDisabled()) break; await b.click(); }
+  await K.click(".sheet .foot >> text=Speichern");
+  await toast(K, /Reihenfolge für Migros gespeichert/);
+  assert.match(await K.locator(".aisle").first().innerText(), /Tiefkühl/);
+  await K.click('.store-row [role=radio]:has-text("Coop")');
+  assert.doesNotMatch(await K.locator(".aisle").first().innerText(), /Tiefkühl/, "Coop keeps its own order");
+  await K.click('.store-row [role=radio]:has-text("Migros")');
+  const hid = await K.evaluate(() => location.hash.slice(1));
+  const home = await K.evaluate(id => JSON.parse(localStorage.getItem("hp.h." + id)).home, hid);
+  assert.strictEqual(home.store, "migros"); assert.strictEqual(home.aisles.migros[0], "frozen");
+  await K.click('.sh-main:has-text("Guanciale")');
+  assert.match(await K.locator('.sheet a.btn:has-text("Migros")').getAttribute("href"), /^https:\/\/www\.migros\.ch\/de\/search\?query=Guanciale$/);
+  await K.click(".sheet-head >> text=Abbrechen"); await noSheet(K);
+  if (!(await K.evaluate(() => typeof navigator.share === "function"))) {
+    await K.click("text=Liste kopieren");
+    await toast(K, /Liste kopiert/);
+    const text = await K.evaluate(() => navigator.clipboard.readText());
+    assert.match(text, /^Einkaufsliste für Migros · Küche Test/);
+    assert.ok(text.indexOf("🧊 Tiefkühl") < text.indexOf("🥩 Fleisch"), "aisles in Migros order");
+  }
+  await K.context().close();
+});
+step("Teilen an die App (Android): Text und Screenshot kommen als Rezept an", async () => {
+  const S = await device({ sw: true });
+  await S.goto(BASE);
+  await createHome(S, "Teilen Test", ["Marc"]);
+  await S.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await S.reload();
+  await S.waitForFunction(() => !!navigator.serviceWorker.controller);
+  const png = await recipePng(S, path.join(TMP, "homeplaner-share.png"));
+  const ok = await S.evaluate(async b64 => {
+    const bin = atob(b64), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    const fd = new FormData();
+    fd.append("title", "Carbonara"); fd.append("text", "Unser Rezept"); fd.append("images", new File([u8], "s.png", { type: "image/png" }));
+    const r = await fetch("share-target", { method: "POST", body: fd });
+    const c = await caches.open("hp-share"), m = await c.match("shared/meta");
+    return r.ok && !!m && (await m.json()).n === 1;
+  }, png);
+  assert.ok(ok, "the service worker keeps what was shared");
+  await S.goto("about:blank");
+  await S.goto(BASE + "#teilen");
+  await S.locator('.sheet-head:has-text("Rezept prüfen")').waitFor({ timeout: 90000 });
+  assert.strictEqual(await S.inputValue("#hp-rc-title"), "Spaghetti Carbonara");
+  assert.strictEqual(await S.evaluate(() => caches.has("hp-share")), false, "taken once, then thrown away");
+  /* several households and none of them open: the shared recipe waits until one is chosen */
+  await S.click(".sheet-head >> text=Abbrechen"); await noSheet(S);
+  await S.click(".back"); await sees(S, "Eure Haushalte");
+  await createHome(S, "Zweiter Haushalt", ["Lea"]);
+  await S.click(".back"); await sees(S, "Eure Haushalte");
+  await S.evaluate(async () => {
+    const fd = new FormData();
+    fd.append("text", "Pasta mit Pesto\nZutaten\n200 g Spaghetti\n1 Glas Pesto\nZubereitung\nSpaghetti 10 Minuten kochen und mit dem Pesto mischen.");
+    await fetch("share-target", { method: "POST", body: fd });
+  });
+  await S.goto("about:blank");
+  await S.goto(BASE + "#teilen");
+  await toast(S, /Wähl den Haushalt/);
+  await S.click(".trip:has-text('Teilen Test')");
+  await S.locator('.sheet-head:has-text("Rezept prüfen")').waitFor();
+  assert.strictEqual(await S.inputValue("#hp-rc-title"), "Pasta mit Pesto");
+  await S.context().close();
+});
 step("Schmales Handy (320 px): kein seitliches Scrollen", async () => {
   const N = await device({ width: 320 });
   await N.goto(BASE);
@@ -470,9 +631,26 @@ step("Gruppen-Sync: für alle löschen", async () => {
 });
 step("Gruppen-Sync: fehlende Regeln und fehlende Datenbank werden klar gemeldet", async () => {
   FS.deny = true;
-  await createHome(C1, "Geht nicht", ["Marc"]).catch(() => {});
-  await toast(C1, /Sicherheitsregeln/);
-  await C1.goto(BASE);
+  await createHome(C1, "Geht trotzdem", ["Marc"]);
+  await toast(C1, /vorerst nur auf diesem Gerät/);
+  await sees(C1, "Nur auf diesem Gerät gespeichert");
+  await C1.click(".back");
+  await sees(C1, "Gruppen-Sync: noch ein Schritt");
+  await C1.click(".trip:has-text('Geht trotzdem')");
+  await C1.click("text=Einladen");
+  await C1.click("text=Für alle im Haushalt freigeben");
+  await toast(C1, /fehlen die Sicherheitsregeln/);
+  await C1.click(".sheet-head >> text=Abbrechen"); await noSheet(C1);
+  FS.deny = false;
+  await C1.click("text=Einladen");
+  await C1.click("text=Für alle im Haushalt freigeben");
+  await toast(C1, /Freigegeben/);
+  await C1.click(".sheet-head >> text=Fertig"); await noSheet(C1);
+  await sees(C1, "Automatisch für den ganzen Haushalt gespeichert");
+  await C1.click(".back");
+  await C1.click("text=Nochmals prüfen").catch(() => {});
+  await C1.locator("text=Gruppen-Sync: noch ein Schritt").waitFor({ state: "detached" });
+  FS.deny = true;
   await C1.click('[aria-label="Einstellungen"]');
   await C1.click("text=Verbindung prüfen");
   await sees(C1, "Es fehlen die Sicherheitsregeln");
