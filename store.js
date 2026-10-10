@@ -15,6 +15,9 @@ window.HPStore = (function () {
   /* Zustand der Datei config.js: "on" = Gruppen-Sync eingerichtet, "off" = bewusst leer gelassen,
      "incomplete" = Angaben fehlen oder sind noch Platzhalter, "broken" = die Datei liess sich nicht lesen (Tippfehler). */
   var configState = !RAW || typeof RAW !== "object" ? "broken" : cloudOn ? "on" : CFG ? "incomplete" : "off";
+  /* Kalender-Dienst für Abos in Outlook und im iPhone-Kalender (kalender-worker.js): nur eine schlichte https-Adresse. */
+  var CAL = RAW && typeof RAW === "object" && typeof RAW.calendar === "string" && /^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[A-Za-z0-9._~\/-]*)?$/.test(RAW.calendar.trim())
+    ? RAW.calendar.trim().replace(/\/+$/, "") : "";
 
   /* Die Bereiche eines Haushalts und wie ihre Einträge gelesen werden. */
   var COLS = ["expenses", "shopping", "events", "plants", "infos", "recipes"];
@@ -298,6 +301,25 @@ window.HPStore = (function () {
      geteilten Haushalt, wird sie deshalb kurz nach dem Start geladen, auch wenn nur die Liste offen ist. */
   if (cloudOn && regList().some(function (e) { return e.mode === "cloud"; })) setTimeout(function () { fb().catch(function () {}); }, 2000);
 
+  /* ---------- Kalender-Abo ---------- */
+  /* Holt beim Kalender-Dienst den Schlüssel für den Kalender eines Haushalts. Der Schlüssel verrät die Kennung nicht. */
+  function calendarToken(id) {
+    if (!CAL) return Promise.reject({ code: "cal-none" });
+    var ctl = typeof AbortController === "function" ? new AbortController() : null, t = setTimeout(function () { if (ctl) ctl.abort(); }, 15000);
+    return fetch(CAL + "/token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ home: id }), signal: ctl ? ctl.signal : undefined, cache: "no-store" })
+      .then(function (res) {
+        clearTimeout(t);
+        if (res.status === 404) throw { code: "cal-unknown" };
+        if (res.status === 500) throw { code: "cal-setup" };
+        if (!res.ok) throw { code: "cal-firebase" };
+        return res.json();
+      }, function () { clearTimeout(t); throw { code: "cal-offline" }; })
+      .then(function (r) { if (!r || typeof r.token !== "string" || !/^[A-Za-z0-9_-]{40,200}$/.test(r.token)) throw { code: "cal-firebase" }; return r.token; });
+  }
+  function calendarUrl(token, kinds) {
+    return CAL + "/kalender/" + token + ".ics" + (kinds && kinds.length ? "?arten=" + kinds.join(",") : "");
+  }
+
   /* ---------- Sicherung ---------- */
   /* cols: { expenses: [...], shopping: [...], ... } mit den gelesenen Einträgen (jeweils mit id). */
   function backup(home, cols) {
@@ -310,8 +332,8 @@ window.HPStore = (function () {
     };
   }
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  function viaLink(filename, json) {
-    var url = URL.createObjectURL(new Blob([json], { type: "application/json" })), a = document.createElement("a");
+  function viaLink(filename, json, type) {
+    var url = URL.createObjectURL(new Blob([json], { type: type || "application/json" })), a = document.createElement("a");
     a.href = url; a.download = filename; a.style.display = "none";
     document.body.appendChild(a); a.click();
     setTimeout(function () { a.remove(); URL.revokeObjectURL(url); }, 4000);
@@ -319,18 +341,20 @@ window.HPStore = (function () {
   }
   /* Übergibt die Sicherung als Datei. In der App vom Home-Bildschirm des iPhones ist ein gewöhnlicher Download unzuverlässig;
      dort öffnet sich das Teilen-Menü ("In Dateien sichern", AirDrop, Mail). */
-  function download(filename, obj) {
-    var json = JSON.stringify(obj, null, 2);
+  /* obj: ein Objekt (wird JSON) oder fertiger Text mit seinem Typ, etwa eine Kalenderdatei ("text/calendar"). */
+  function download(filename, obj, type) {
+    var json = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+    type = type || "application/json";
     try {
       if (isIOS && navigator.standalone === true && typeof File === "function" && navigator.canShare && navigator.share) {
-        var file = new File([json], filename, { type: "application/json" });
+        var file = new File([json], filename, { type: type });
         if (navigator.canShare({ files: [file] })) {
           return navigator.share({ files: [file] }).then(function () { return "shared"; },
-            function (e) { return e && e.name === "AbortError" ? "cancelled" : viaLink(filename, json); });
+            function (e) { return e && e.name === "AbortError" ? "cancelled" : viaLink(filename, json, type); });
         }
       }
     } catch (e) { /* dann der gewöhnliche Weg */ }
-    return Promise.resolve(viaLink(filename, json));
+    return Promise.resolve(viaLink(filename, json, type));
   }
   /* Liest eine Sicherung ein und legt sie als neuen Haushalt auf diesem Gerät an. Jedes Feld wird geprüft. */
   function importBackup(obj) {
@@ -361,6 +385,7 @@ window.HPStore = (function () {
   }
 
   return {
+    calendarService: CAL, calendarToken: calendarToken, calendarUrl: calendarUrl,
     cloudOn: cloudOn, configState: configState, projectId: cloudOn ? String(CFG.projectId) : "",
     storageOk: storageOk, cloudDurable: cloudDurable, COLS: COLS, NORM: NORM,
     randomId: randomId, validId: validId, idFromLink: idFromLink, linkFor: linkFor,

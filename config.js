@@ -26,5 +26,11 @@ const firebaseConfig = {
   appId: "1:18964279601:web:03099143f60fe0e248c010"
 };
 
+/* KALENDER IN OUTLOOK UND AUF DEM IPHONE
+   Für ein Kalender-Abo, das sich selbst aktualisiert, braucht es einmal einen kleinen Kalender-Dienst (kostenlos bei
+   Cloudflare, Datei kalender-worker.js, Anleitung im README). Seine Adresse kommt hierher, zum Beispiel
+   "https://home-planer-kalender.marc.workers.dev". Leer: Die App bietet den Kalender als Datei an. */
+const kalenderDienst = "";
+
 /* Ab hier nichts ändern. */
-window.HOMEPLANER_CONFIG = { firebase: firebaseConfig };
+window.HOMEPLANER_CONFIG = { firebase: firebaseConfig, calendar: kalenderDienst };

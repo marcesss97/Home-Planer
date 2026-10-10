@@ -60,7 +60,7 @@ const docsUnder = hid => Object.keys(FS.db).filter(k => k.indexOf("homes/" + hid
 
 /* ---------- devices ---------- */
 let browser, BASE;
-async function device({ cloud, width, dark, sw } = {}) {
+async function device({ cloud, width, dark, sw, calendar } = {}) {
   const ctx = await browser.newContext({ viewport: { width: width || 390, height: 844 }, locale: "de-CH", timezoneId: "Europe/Zurich", colorScheme: dark ? "dark" : "light", acceptDownloads: true,
     serviceWorkers: sw ? "allow" : "block", permissions: ["clipboard-read", "clipboard-write"] });
   if (cloud) {
@@ -70,6 +70,11 @@ async function device({ cloud, width, dark, sw } = {}) {
     await ctx.route("**/config.js", r => r.fulfill({ contentType: "application/javascript", body: "window.HOMEPLANER_CONFIG = { firebase: null };" }));
   }
   await ctx.route(/^https:\/\//, r => r.abort());                     // no rates, no fonts from elsewhere: nothing may depend on it
+  if (calendar) {                                                       // a calendar service: config.js names it, the test plays it
+    const cfg = fs.readFileSync(path.join(__dirname, "..", "config.js"), "utf8").replace('const kalenderDienst = "";', "const kalenderDienst = \"https://kal.test\";");
+    await ctx.route("**/config.js", r => r.fulfill({ contentType: "application/javascript", body: cfg }));
+    await ctx.route("https://kal.test/**", r => calendar(r));
+  }
   const p = await ctx.newPage();
   p.errors = [];
   p.on("pageerror", e => p.errors.push("pageerror: " + e.message));
@@ -550,6 +555,102 @@ step("Teilen an die App (Android): Text und Screenshot kommen als Rezept an", as
   assert.strictEqual(await S.inputValue("#hp-rc-title"), "Pasta mit Pesto");
   await S.context().close();
 });
+step("Rezeptbuch: Sammlung, Suche, zurück ins Buch, Notiz übernimmt das Rezept, Tipp und Bewertung im Kochmodus", async () => {
+  await tab(A, "recipes");
+  await A.locator("#hp-book").scrollIntoViewIfNeeded();
+  const total = await A.evaluate(() => window.HP.ideas().length);
+  assert.ok(total >= 150, "recipe book: " + total);
+  await A.click('.book-coll:has-text("Glasiertes Poulet mit Reis")');
+  await A.locator('.sheet-head:has-text("Glasiertes Poulet mit Reis")').waitFor();
+  assert.ok(await A.locator(".sheet .list .x").count() >= 10);
+  await A.fill("#hp-book-q", "teriyaki");
+  await A.waitForFunction(() => document.querySelectorAll(".sheet .list .x").length === 1);
+  await A.click('.sheet .list .x:has-text("Teriyaki")');
+  await A.locator('.sheet-head:has-text("Teriyaki")').waitFor();
+  await sees(A, "Japanisch");
+  await A.locator('.field:has-text("In dieselbe Richtung") .x').first().waitFor();
+  await A.click(".sheet-head >> text=Fertig");
+  await A.locator('.sheet-head:has-text("Glasiertes Poulet mit Reis")').waitFor();
+  assert.strictEqual(await A.inputValue("#hp-book-q"), "teriyaki", "back in the book, the search is still there");
+  await A.click('.sheet .list .x:has-text("Teriyaki")');
+  await A.click("text=Wie war's? Notiz schreiben");
+  await A.click('.note-form [role=radio]:has-text("Sehr gut")');
+  await A.fill("#hp-rn-text", "Doppelte Glasur, Reis mit Limette.");
+  await A.check(".note-form input[type=checkbox]");
+  await A.click("text=Notiz speichern");
+  await toast(A, /Notiert/);
+  await A.locator('.sheet-head:has-text("Bearbeiten")').waitFor();
+  await A.locator(".rnote.tip", { hasText: "Doppelte Glasur" }).waitFor();
+  await A.locator(".note.tipnote", { hasText: "Doppelte Glasur" }).waitFor();
+  await A.click("text=Kochmodus starten");
+  await A.locator(".cook .tipnote", { hasText: "Doppelte Glasur" }).waitFor();
+  for (let i = 0; i < 12 && await A.locator(".cook-nav .btn.primary").count(); i++) await A.click(".cook-nav .btn.primary");
+  await A.click('.cook-rate [role=radio]:has-text("Nicht nochmals")');
+  await A.fill("#hp-ck-note", "Zu süss: weniger Zucker.");
+  await A.click(".cook-done .btn.primary");
+  await toast(A, /En Guete/);
+  await A.locator('.sheet-head:has-text("Teriyaki")').waitFor();
+  assert.strictEqual(await A.locator(".rnote").count(), 2);
+  await sees(A, "Zuletzt: Nicht nochmals");
+  await A.click(".rnote:has-text('Doppelte Glasur') [aria-label='Notiz löschen']");
+  await A.click(".rnote:has-text('Doppelte Glasur') [aria-label^='Wirklich']");
+  await A.waitForFunction(() => document.querySelectorAll(".rnote").length === 1);
+  await A.click('.sheet-head >> text=Bearbeiten');
+  assert.strictEqual(await A.inputValue("#hp-rc-kitchen"), "jp", "the kitchen comes along");
+  await A.fill("#hp-rc-title", "Teriyaki-Poulet wie bei uns");
+  await save(A);
+  await A.locator('.sheet-head:has-text("Teriyaki-Poulet wie bei uns")').waitFor();
+  assert.strictEqual(await A.locator(".rnote").count(), 1, "editing the recipe keeps the notes");
+  await A.click(".sheet-head >> text=Fertig"); await noSheet(A);
+  await A.locator('.x:has-text("Teriyaki-Poulet wie bei uns") .moodb').waitFor();
+  /* «Nicht nochmals» stays out of the dice */
+  await A.click('.idea .chip:has-text("Nur unsere")');
+  for (let i = 0; i < 6; i++) {
+    assert.ok(!/Teriyaki/.test(await A.locator(".idea-t").innerText()), "the dice offered a recipe marked «Nicht nochmals»");
+    if (await A.locator("text=Andere Idee").isEnabled()) await A.click("text=Andere Idee");
+  }
+  await A.click('.idea .chip:has-text("Nur unsere")');
+});
+const OUTLOOK_ICS = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Microsoft Corporation//Outlook 16.0 MIMEDIR//EN",
+  "BEGIN:VEVENT", "UID:outlook-1", "SUMMARY:Elternabend", "DTSTART;TZID=W. Europe Standard Time:%D1T193000", "DTEND;TZID=W. Europe Standard Time:%D1T210000", "LOCATION:Schulhaus", "END:VEVENT",
+  "BEGIN:VEVENT", "UID:outlook-2", "SUMMARY:Papiersammlung", "DTSTART;VALUE=DATE:%D2", "RRULE:FREQ=MONTHLY", "END:VEVENT",
+  "BEGIN:VEVENT", "UID:outlook-3", "SUMMARY:Längst vorbei", "DTSTART;VALUE=DATE:20200101", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+step("Kalender: als Datei für Outlook und iPhone, einzelner Termin, Outlook-Datei einlesen", async () => {
+  await tab(A, "cal");
+  await A.click("text=Outlook & iPhone");
+  await sees(A, "Kalender-Dienst");
+  const [dl] = await Promise.all([A.waitForEvent("download"), A.click(".sheet >> text=/Termine als Datei/")]);
+  assert.match(dl.suggestedFilename(), /\.ics$/);
+  const ics = fs.readFileSync(await dl.path(), "utf8");
+  assert.ok(ics.startsWith("BEGIN:VCALENDAR\r\n") && /SUMMARY:🗑️ Kehricht/.test(ics) && /RRULE:FREQ=WEEKLY/.test(ics) && /EXDATE;VALUE=DATE:/.test(ics), "calendar file:\n" + ics.slice(0, 600));
+  await A.click("text=Kalenderdatei einlesen");
+  const d1 = await A.evaluate(t => window.HP.addDays(t, 9).replace(/-/g, ""), today), d2 = await A.evaluate(t => window.HP.addDays(t, 12).replace(/-/g, ""), today);
+  const file = path.join(TMP, "homeplaner-outlook.ics");
+  fs.writeFileSync(file, OUTLOOK_ICS.replace(/%D1/g, d1).replace(/%D2/g, d2));
+  const count = () => A.evaluate(() => { const h = location.hash.slice(1); return Object.keys(JSON.parse(localStorage.getItem("hp.h." + h)).cols.events).length; });
+  const before = await count();
+  await A.setInputFiles("#hp-cal-file", file);
+  await sees(A, "2 Termine gefunden");
+  await sees(A, "Ein vergangener Termin bleibt weg");
+  await A.click('#hp-cal-cat + .chips [role=radio]:has-text("Fest")').catch(() => A.click('.sheet [role=radio]:has-text("Fest")'));
+  await A.click(".sheet .foot >> text=2 Termine übernehmen");
+  await toast(A, /2 Termine übernommen/);
+  assert.strictEqual(await count(), before + 2);
+  await A.click("text=Outlook & iPhone"); await A.click("text=Kalenderdatei einlesen");
+  await A.setInputFiles("#hp-cal-file", file);
+  await A.click(".sheet .foot >> text=2 Termine übernehmen");
+  await toast(A, /2 Termine übernommen/);
+  assert.strictEqual(await count(), before + 2, "the same file again changes the appointments instead of adding them twice");
+  await A.locator("section.stack:has-text('Demnächst') .x", { hasText: "Elternabend" }).waitFor();
+  await A.click("section.stack:has-text('Demnächst') .x:has-text('Elternabend')");
+  await A.locator("#hp-ev-note").waitFor();
+  assert.match(await A.inputValue("#hp-ev-note"), /^Ort: Schulhaus/);
+  const [one] = await Promise.all([A.waitForEvent("download"), A.click("text=In meinen Kalender")]);
+  const single = fs.readFileSync(await one.path(), "utf8");
+  assert.strictEqual((single.match(/BEGIN:VEVENT/g) || []).length, 1);
+  assert.ok(single.indexOf("DTSTART;TZID=Europe/Zurich:" + d1 + "T193000") > 0 && /SUMMARY:🎉 Elternabend/.test(single), (single.match(/SUMMARY.*|CATEGORIES.*/g) || []).join(" / "));
+  await A.click(".sheet-head >> text=Abbrechen"); await noSheet(A);
+});
 step("Schmales Handy (320 px): kein seitliches Scrollen", async () => {
   const N = await device({ width: 320 });
   await N.goto(BASE);
@@ -609,6 +710,58 @@ step("Gruppen-Sync: Einkaufsliste und Pflanzen erscheinen auf dem anderen Handy"
   await tab(C1, "recipes");
   await C1.locator('.x:has-text("Raclette")', { hasText: "Portionen" }).waitFor();
   assert.strictEqual(docsUnder(hid).filter(k => k.indexOf("/recipes/") > 0).length, 1);
+});
+step("Gruppen-Sync: Kalender in Outlook und auf dem iPhone abonnieren, Link erneuern", async () => {
+  const asked = [];
+  const C3 = await device({ cloud: true, calendar: r => {
+    const u = new URL(r.request().url());
+    if (u.pathname !== "/token" || r.request().method() !== "POST") return r.fulfill({ status: 404, body: "" });
+    const home = JSON.parse(r.request().postData() || "{}").home;
+    asked.push(home);
+    const h = FS.db["homes/" + home];
+    if (!h) return r.fulfill({ status: 404, headers: { "Access-Control-Allow-Origin": "*" }, body: "{}" });
+    return r.fulfill({ status: 200, contentType: "application/json", headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ token: "Tk" + (h.calV || 0) + "x".repeat(50) }) });
+  } });
+  await C3.goto(BASE + "#" + hid);
+  await sees(C3, "WG Sync");
+  await tab(C3, "cal");
+  await C3.click("text=Outlook & iPhone");
+  const iphone = C3.locator('.sub-links a:has-text("iPhone")');
+  await iphone.waitFor();
+  assert.deepStrictEqual(asked, [hid]);
+  assert.strictEqual(await iphone.getAttribute("href"), "webcal://kal.test/kalender/Tk0" + "x".repeat(50) + ".ics");
+  const outlook = await C3.locator('.sub-links a:has-text("outlook.com")').getAttribute("href");
+  assert.ok(outlook.startsWith("https://outlook.live.com/calendar/0/addfromweb?url=" + encodeURIComponent("https://kal.test/kalender/Tk0")) && outlook.indexOf("&name=Home-Planer") > 0, outlook);
+  await C3.click('.sheet .chip:has-text("Essen")');
+  assert.match(await C3.inputValue("#hp-cal-link"), /\.ics\?arten=date,birthday,trash,chores,visit,holiday,party,health,other$/);
+  await C3.click("text=Link kopieren");
+  await toast(C3, /Kalender-Link kopiert/);
+  await C3.click("text=Link erneuern"); await C3.click("text=Nochmal tippen");
+  await toast(C3, /Neuer Link/);
+  await C3.waitForFunction(() => /Tk1x/.test((document.querySelector(".sub-links a") || {}).href || ""));
+  assert.strictEqual(FS.db["homes/" + hid].calV, 1);
+  assert.deepStrictEqual(C3.errors, []);
+  await C3.context().close();
+});
+step("Gruppen-Sync: Notizen zum selben Rezept von zwei Handys gleichzeitig", async () => {
+  await tab(C1, "recipes");
+  await C1.fill("#hp-rc-q", "Hummus");
+  await C1.click('.x:has-text("Hummus")');
+  await C1.click("text=Wie war's? Notiz schreiben");
+  await C1.click('.note-form [role=radio]:has-text("Sehr gut")');
+  await C1.click("text=Notiz speichern");
+  await C1.locator('.sheet-head:has-text("Bearbeiten")').waitFor();
+  await tab(C2, "recipes");
+  await C2.fill("#hp-rc-q", "Hummus");
+  await C2.locator('.x:has-text("Hummus") .moodb').waitFor();
+  await C2.click('.x:has-text("Hummus")');
+  await C2.click("text=Notiz schreiben"); await C1.click("text=Notiz schreiben");
+  await C2.fill("#hp-rn-text", "Mehr Zitrone."); await C1.fill("#hp-rn-text", "Kichererbsen schälen lohnt sich.");
+  await Promise.all([C2.click("text=Notiz speichern"), C1.click("text=Notiz speichern")]);
+  for (const P of [C1, C2]) await P.waitForFunction(() => document.querySelectorAll(".rnote").length === 3);
+  const rid = Object.keys(FS.db).find(k => k.indexOf("homes/" + hid + "/recipes/") === 0 && FS.db[k].title === "Hummus");
+  assert.strictEqual(Object.keys(FS.db[rid].notes).length, 3, "no note lost");
+  for (const P of [C1, C2]) { await P.click(".sheet-head >> text=Fertig"); await noSheet(P); await P.fill("#hp-rc-q", ""); }
 });
 step("Gruppen-Sync: gleichzeitige Änderungen an Personen gehen nicht verloren", async () => {
   await Promise.all([

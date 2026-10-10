@@ -550,28 +550,32 @@ window.HP = (function () {
   ];
   var shopT = table(SHOP, "other");
   var SHOP_WORDS = {
-    produce: "apfel äpfel banane birne orange zitrone limette traube beere erdbeer himbeer heidelbeer kiwi mango ananas melone salat gurke tomate rüebli karotte peperoni paprika zwiebel knoblauch kartoffel härdöpfel lauch zucchetti zucchini aubergine brokkoli broccoli blumenkohl kohl spinat pilz champignon avocado ingwer kräuter basilikum petersilie schnittlauch koriander fenchel sellerie kürbis radiesli frucht früchte gemüse obst nektarine pfirsich aprikose zwetschge kirsche",
+    produce: "apfel äpfel banane birne orange zitrone limette traube beere erdbeer himbeer heidelbeer kiwi mango ananas melone salat gurke tomate rüebli karotte peperoni paprika zwiebel knoblauch kartoffel härdöpfel lauch zucchetti zucchini aubergine brokkoli broccoli blumenkohl kohl spinat pilz champignon avocado ingwer kräuter basilikum petersilie schnittlauch koriander fenchel sellerie kürbis radiesli frucht früchte gemüse obst nektarine pfirsich aprikose zwetschge kirsche dill minze rosmarin thymian salbei majoran zitronengras schalotte chilischote randen rande choi sprossen rettich kabis krautstiel mais shiitake granatapfel peterli frühlingszwiebel",
     bakery: "brot zopf gipfeli weggli brötchen toast baguette ciabatta croissant kuchen tortilla wrap fladen",
-    dairy: "milch käse joghurt jogurt yoghurt butter rahm quark mozzarella parmesan pecorino gruyère emmentaler appenzeller sbrinz vacherin raclettekäse feta eier mascarpone ricotta hüttenkäse crème creme fraîche fraiche skyr sauerrahm",
-    meat: "fleisch poulet huhn hähnchen rind schwein kalb lamm hack wurst cervelat salami schinken speck guanciale pancetta chorizo lachs thon fisch forelle crevetten steak filet plätzli bratwurst geschnetzeltes",
-    pantry: "pasta teigwaren spaghetti nudeln penne hörnli reis risotto mehl zucker salz pfeffer öl olivenöl essig gewürz konserve bohnen linsen kichererbsen sauce sosse ketchup senf mayo honig konfi marmelade müesli muesli haferflocken cornflakes kaffee tee bouillon tomatenpüree passata nüsse mandeln couscous quinoa tofu hefe backpulver sesam kokosmilch currypaste maizena tortilla magronen makkaroni lasagne gnocchi brühe gemüsebrühe apfelmus tomatenmark polenta bulgur paniermehl",
-    frozen: "tiefkühl glace pizza pommes eiswürfel edamame",
-    drinks: "wasser mineral saft apfelsaft orangensaft bier wein rotwein weisswein prosecco cola eistee sirup limonade rivella kombucha milchdrink",
-    sweets: "schoggi schokolade chips guetzli keks bonbon gummibär snack popcorn riegel praline nutella",
+    dairy: "milch käse joghurt jogurt yoghurt butter rahm quark mozzarella parmesan pecorino gruyère emmentaler appenzeller sbrinz vacherin raclettekäse feta eier mascarpone ricotta hüttenkäse crème creme fraîche fraiche skyr sauerrahm eigelb eiweiss paneer cheddar halloumi labneh ghee teig kuchenteig flammkuchenteig pizzateig",
+    meat: "fleisch poulet huhn hähnchen rind schwein kalb lamm hack wurst cervelat salami schinken speck guanciale pancetta chorizo lachs thon fisch forelle crevetten steak filet plätzli bratwurst geschnetzeltes wienerli",
+    pantry: "pasta teigwaren spaghetti nudeln penne hörnli reis risotto mehl zucker salz pfeffer öl olivenöl essig gewürz konserve bohnen linsen kichererbsen sauce sosse ketchup senf mayo honig konfi marmelade müesli muesli haferflocken cornflakes kaffee tee bouillon tomatenpüree passata nüsse mandeln couscous quinoa tofu hefe backpulver sesam kokosmilch currypaste maizena tortilla magronen makkaroni lasagne gnocchi brühe gemüsebrühe apfelmus tomatenmark polenta bulgur paniermehl linguine trofie spätzli rösti erdnussbutter kokosrahm fischsauce glasnudeln tahini harissa miso mirin gochujang kecap sambal sriracha hoisin kombu nori wakame algen bonito panko kapern oliven pistazien pinienkerne rosinen sultaninen kokosraspel datteln graupen gerste lorbeer safran kurkuma kardamom sternanis zimt kümmel masala sumach za'atar zaatar hanout biber chiliflocken chilipaste chilipulver currypulver kakao bockshornklee salsa guacamole kimchi freekeh pesto granatapfelsirup reisessig rotweinessig weissweinessig sherryessig apfelessig malzessig balsamico tamarinde kürbiskerne korianderpulver koriandersamen cocktailkirsche cornichons essiggurke eingelegte röstzwiebel gehackte pizzamehl",
+    frozen: "tiefkühl glace pizza pommes eiswürfel edamame erbsen teigblätter",
+    drinks: "wasser mineral saft apfelsaft orangensaft bier wein rotwein weisswein prosecco cola eistee sirup limonade rivella kombucha milchdrink sake amaretto marsala kirsch ananassaft",
+    sweets: "schoggi schokolade chips guetzli keks bonbon gummibär snack popcorn riegel praline nutella biscuit marzipan",
     care: "shampoo duschgel seife zahnpasta zahnbürste deo sonnencreme taschentücher watte rasier tampons binden windeln pflaster medikament dafalgan handcreme bodylotion",
-    clean: "putzmittel abwaschmittel spülmittel geschirrspül tabs waschmittel weichspüler wc-papier toilettenpapier haushaltpapier küchenpapier abfallsack kehrichtsack müllsack schwamm lappen entkalker alufolie frischhaltefolie backpapier batterie glühbirne kerze"
+    clean: "putzmittel abwaschmittel spülmittel geschirrspül tabs waschmittel weichspüler wc-papier toilettenpapier haushaltpapier küchenpapier abfallsack kehrichtsack müllsack schwamm lappen entkalker alufolie frischhaltefolie backpapier batterie glühbirne kerze spiesse"
   };
+  /* Wendungen aus mehreren Wörtern, die anders einzuordnen sind als ihr Hauptwort (Dosentomaten gehören in den Vorrat). */
+  var SHOP_PHRASES = { pantry: ["geschälte tomaten", "dose ananas", "ananasscheiben", "getrocknete shiitake", "getrocknete chili", "thon in"] };
   var SHOP_INDEX = [];
   Object.keys(SHOP_WORDS).forEach(function (sec) { SHOP_WORDS[sec].split(" ").forEach(function (w) { SHOP_INDEX.push({ w: w, sec: sec }); }); });
+  Object.keys(SHOP_PHRASES).forEach(function (sec) { SHOP_PHRASES[sec].forEach(function (w) { SHOP_INDEX.push({ w: w, sec: sec }); }); });
   SHOP_INDEX.sort(function (a, b) { return b.w.length - a.w.length; });
   function shopGuess(name) {
     var t = String(name || "").toLowerCase();
+    if (/^(ei|eier)(?![a-zäöü])/.test(t)) return "dairy";               // "Ei" allein ist zu kurz für die Stichwortsuche
     for (var i = 0; i < SHOP_INDEX.length; i++) if (t.indexOf(SHOP_INDEX[i].w) >= 0) return SHOP_INDEX[i].sec;
     return "other";
   }
   /* Zahlen und Einheiten in Mengenangaben, auch aus Rezepten ("1/2 TL", "½ Bund", "1-2 Zehen"). */
   var NUM = "(?:\\d+\\/\\d+|\\d+(?:[.,]\\d+)?(?:\\s*[-–]\\s*\\d+(?:[.,]\\d+)?)?|[½¼¾⅓⅔])";
-  var UNIT = "(?:x|stk\\.?|stück|kg|kilo|g|gramm|l|liter|dl|cl|ml|el|tl|msp|prise|prisen|pack|packung|päckli|paket|pkg\\.?|dose|dosen|flasche|flaschen|bund|beutel|glas|becher|rolle|rollen|schachtel|tube|zehe|zehen|scheibe|scheiben|stange|stangen|zweig|zweige|handvoll|kopf|knolle)";
+  var UNIT = "(?:x|stk\\.?|stück|kg|kilo|g|gramm|l|liter|dl|cl|ml|el|tl|msp|prise|prisen|pack|packung|päckli|paket|pkg\\.?|dose|dosen|flasche|flaschen|bund|beutel|glas|becher|rolle|rollen|schachtel|tube|zehe|zehen|scheibe|scheiben|stange|stangen|zweig|zweige|handvoll|kopf|knolle|briefchen|briefli)";
   /* "2 Liter Milch", "Milch 2l", "3x Joghurt": eine Mengenangabe am Anfang oder am Ende wird abgetrennt. */
   function splitQty(input) {
     var s = String(input || "").trim().replace(/\s+/g, " ");
@@ -747,6 +751,68 @@ window.HP = (function () {
     { id: "prep", label: "Vorkochen", emoji: "📦" }
   ];
   var tagT = table(RECIPE_TAGS, "vegi");
+  /* Küchen des Rezeptbuchs, nach Weltgegend geordnet. Eigene Rezepte können auch eine Küche haben. */
+  var REGIONS = [
+    { id: "asien", label: "Asien", emoji: "🥢" },
+    { id: "europa", label: "Europa", emoji: "🍷" },
+    { id: "nahost", label: "Nahost & Nordafrika", emoji: "🧆" },
+    { id: "amerika", label: "Amerika", emoji: "🌮" }
+  ];
+  var KITCHENS = [
+    { id: "th", label: "Thailändisch", emoji: "🇹🇭", region: "asien" },
+    { id: "cn", label: "Chinesisch", emoji: "🇨🇳", region: "asien" },
+    { id: "jp", label: "Japanisch", emoji: "🇯🇵", region: "asien" },
+    { id: "kr", label: "Koreanisch", emoji: "🇰🇷", region: "asien" },
+    { id: "in", label: "Indisch", emoji: "🇮🇳", region: "asien" },
+    { id: "vn", label: "Vietnamesisch", emoji: "🇻🇳", region: "asien" },
+    { id: "sea", label: "Indonesien, Malaysia & Philippinen", emoji: "🌴", region: "asien" },
+    { id: "ch", label: "Schweiz", emoji: "🇨🇭", region: "europa" },
+    { id: "it", label: "Italienisch", emoji: "🇮🇹", region: "europa" },
+    { id: "fr", label: "Französisch", emoji: "🇫🇷", region: "europa" },
+    { id: "es", label: "Spanien & Portugal", emoji: "🇪🇸", region: "europa" },
+    { id: "gr", label: "Griechisch", emoji: "🇬🇷", region: "europa" },
+    { id: "de", label: "Deutschland & Österreich", emoji: "🥨", region: "europa" },
+    { id: "east", label: "Osteuropa", emoji: "🥟", region: "europa" },
+    { id: "nord", label: "Skandinavien & Britische Inseln", emoji: "🐟", region: "europa" },
+    { id: "levante", label: "Levante & Nahost", emoji: "🧆", region: "nahost" },
+    { id: "maghreb", label: "Nordafrika", emoji: "🫖", region: "nahost" },
+    { id: "amerika", label: "Amerika & Mexiko", emoji: "🌮", region: "amerika" }
+  ];
+  var kitT = table(KITCHENS, "ch");
+  var regT = table(REGIONS, "europa");
+  /* Sammlungen im Rezeptbuch: von Hand zusammengestellte Reihen quer durch die Küchen. */
+  var COLLECTIONS = [
+    { id: "glasiert", label: "Glasiertes Poulet mit Reis", emoji: "🍗", text: "Süss, salzig, klebrig glänzend: Poulet mit Glasur und Reis, von Teriyaki bis Granatapfel." },
+    { id: "ottolenghi", label: "Im Stil von Ottolenghi", emoji: "🌿", text: "Eigene Rezepte im Geist der modernen Levante-Küche: viele Kräuter, Joghurt, Tahini, Granatapfel, Zitrone und Gewürze wie Sumach und Za'atar." }
+  ];
+  var collT = table(COLLECTIONS, "glasiert");
+  /* Notizen zu einem Rezept: wie es war, und was man das nächste Mal anders macht. */
+  var MOODS = [
+    { id: "top", label: "Sehr gut", emoji: "😋" },
+    { id: "ok", label: "Ganz okay", emoji: "🙂" },
+    { id: "flop", label: "Nicht nochmals", emoji: "😕" }
+  ];
+  var moodT = table(MOODS, "ok");
+  /* Gespeichert als Tabelle { Kennung: Notiz }, damit zwei Personen gleichzeitig schreiben können, ohne sich zu überschreiben.
+     Eine gelöschte Notiz ist null. Ergebnis: Liste, die neuste zuerst. */
+  function normNotes(v) {
+    var out = [];
+    if (v && typeof v === "object" && !Array.isArray(v)) for (var k in v) {
+      var x = v[k];
+      if (!okId(k) || !x || typeof x !== "object" || out.length >= 200) continue;
+      var t = text(x.text, 500).trim(), mood = moodT.has(x.mood) ? x.mood : "";
+      if (!t && !mood) continue;
+      out.push({ id: k, text: t, mood: mood, tip: x.tip === true && !!t, by: okId(x.by) ? x.by : null, at: num0(x.at), d: validDate(x.d) ? x.d : "" });
+    }
+    out.sort(function (a, b) { return b.at - a.at || (a.id < b.id ? 1 : -1); });
+    return out.slice(0, 100);
+  }
+  /* Wie kam ein Rezept an? Zählt die Stimmungen, nennt die letzte und die Tipps fürs nächste Mal. */
+  function noteSummary(r) {
+    var notes = (r && r.notes) || [], o = { top: 0, ok: 0, flop: 0, mood: "", tips: [] };
+    notes.forEach(function (n) { if (n.mood) { o[n.mood]++; if (!o.mood) o.mood = n.mood; } if (n.tip) o.tips.push(n); });
+    return o;
+  }
   /* "Schnell" ist, was so markiert ist oder höchstens eine halbe Stunde dauert; vegan ist auch vegi. */
   function hasTag(r, tag) {
     if (tag === "quick") return r.tags.indexOf("quick") >= 0 || (r.time > 0 && r.time <= 30);
@@ -755,7 +821,10 @@ window.HP = (function () {
   }
   /* Grundvorrat, den man fast immer zu Hause hat: wird beim Übertragen auf die Einkaufsliste zuerst abgewählt. */
   var STAPLE = /^(salz|pfeffer|salz,? pfeffer.*|muskat|zucker|mehl|öl|olivenöl|rapsöl|bratbutter|essig|wasser|oregano|paprikapulver|kreuzkümmel|backpulver|zimt|chilipulver|bouillon|gemüsebouillon)$/i;
-  function isStaple(line) { var n = splitQty(line).name.replace(/\(.*?\)/g, "").replace(/,.*$/, "").trim(); return STAPLE.test(n) || /^salz\b/i.test(n); }
+  function isStaple(line) {
+    var n = splitQty(line).name.replace(/\(.*?\)/g, "").replace(/,.*$/, "").replace(/\s+(zum|für|nach|oder)\s.*$/i, "").trim();
+    return STAPLE.test(n) || /^salz\b/i.test(n) || /(^|\s)wasser$/i.test(n);
+  }
   /* Eine Zutat auf andere Portionen umrechnen: "200 g Spaghetti" mal 1.5 ergibt "300 g Spaghetti". Was keine Zahl am Anfang hat, bleibt. */
   var FRAC = { "½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 1 / 3, "⅔": 2 / 3 };
   function qtyNum(t) {
@@ -837,13 +906,16 @@ window.HP = (function () {
      Wörtern des Schritts, über die ersten fünf Buchstaben: "Knoblauchzehen" passt zu "Knoblauch", "Zwiebeln" zu "Zwiebel". */
   function nounsOf(line) {
     var n = splitQty(line).name.replace(/\(.*?\)/g, " ").split(",")[0];
-    return n.split(/[\s/-]+/).filter(function (w) { return /^[A-ZÄÖÜ][a-zäöüßèéàâêç]{2,}/.test(w); }).map(function (w) { return w.toLowerCase(); });
+    return n.split(/[\s/-]+/).filter(function (w) { return /^[A-ZÄÖÜ][a-zäöüßèéàâêç]{2,}/.test(w) || SHORT[w.toLowerCase()]; }).map(function (w) { return w.toLowerCase(); });
   }
+  /* Zu kurz für den Vergleich über fünf Buchstaben: "Ei" passt zu "Ei", "Eier", "Spiegeleier", nie zu "ein"; "Öl" zu "Olivenöl". */
+  var SHORT = { ei: /^(ei|eiern|[a-zäöü]*eier)$/, "öl": /öl$/ };
   function stepIngredients(step, lines) {
-    var words = String(step || "").toLowerCase().split(/[^a-zäöüßèéàâêç]+/).filter(function (w) { return w.length >= 4; });
+    var all = String(step || "").toLowerCase().split(/[^a-zäöüßèéàâêç]+/), words = all.filter(function (w) { return w.length >= 4; });
     var out = [];
     (lines || []).forEach(function (line, i) {
       var hit = nounsOf(line).some(function (n) {
+        if (SHORT[n]) return all.some(function (w) { return SHORT[n].test(w); });
         var a = n.slice(0, 5);
         /* auch Kurzformen zusammengesetzter Wörter: «Magronen» für «Älplermagronen», «Tomaten» für «Cherrytomaten» */
         return words.some(function (w) { return w.slice(0, 5) === a || (n.length >= 5 && w.indexOf(n) === 0) || (w.length >= 5 && n.length > w.length && n.slice(-w.length) === w); });
@@ -907,7 +979,7 @@ window.HP = (function () {
       if (Array.isArray(a)) aisles[st.id] = a.filter(function (x) { return shopT.has(x); }).slice(0, 20);
     });
     return { id: id, name: text(d.name, 80).trim() || "Haushalt", base: d.base, rates: rates, members: members, created: num0(d.created),
-      store: storeOf(d.store) ? d.store : "", aisles: aisles };
+      store: storeOf(d.store) ? d.store : "", aisles: aisles, calV: intIn(d.calV, 0, 9999999, 0) };
   }
   function normExpense(id, d) {
     if (!d || typeof d !== "object" || !posNum(d.amount) || typeof d.cur !== "string" || !/^[A-Z]{3}$/.test(d.cur)) return null;
@@ -968,6 +1040,7 @@ window.HP = (function () {
     var lines = function (v, max, len) { return (Array.isArray(v) ? v : []).filter(function (x) { return typeof x === "string"; }).map(function (x) { return x.slice(0, len).trim(); }).filter(Boolean).slice(0, max); };
     return { id: id, title: title, emoji: isDish(d.emoji) ? d.emoji : "teller", cat: recT.has(d.cat) ? d.cat : "main", tags: tags,
       time: intIn(d.time, 0, 1440, 0), serves: intIn(d.serves, 1, 50, 4), ingr: lines(d.ingr, 60, 120), steps: lines(d.steps, 40, 600),
+      notes: normNotes(d.notes), kitchen: kitT.has(d.kitchen) ? d.kitchen : "", coll: (Array.isArray(d.coll) ? d.coll : []).filter(function (c, i, a) { return collT.has(c) && a.indexOf(c) === i; }),
       link: okUrl(d.link) ? d.link : "", note: text(d.note, 2000), fav: d.fav === true, last: validDate(d.last) ? d.last : "", n: intIn(d.n, 0, 100000, 0),
       by: okId(d.by) ? d.by : null, ts: num0(d.ts), up: num0(d.up) };
   }
@@ -997,6 +1070,8 @@ window.HP = (function () {
     EV_CATS: EV_CATS, evCat: evT.get, REPEATS: REPEATS, occurrences: occurrences, eventCheck: eventCheck, normEvent: normEvent,
     PLANTS: PLANTS, isPlantEmoji: isPlantEmoji, plantEmoji: plantEmoji, plantDue: plantDue, feedDue: feedDue, careFields: careFields, normPlant: normPlant,
     INFO_CATS: INFO_CATS, infoCat: infoT.get, okUrl: okUrl, dueOf: dueOf, normInfo: normInfo,
+    MOODS: MOODS, mood: moodT.get, isMood: moodT.has, noteSummary: noteSummary,
+    REGIONS: REGIONS, region: regT.get, KITCHENS: KITCHENS, kitchen: kitT.get, isKitchen: kitT.has, COLLECTIONS: COLLECTIONS, collection: collT.get, isCollection: collT.has,
     DISHES: DISHES, isDish: isDish, dishEmoji: dishEmoji, RECIPE_CATS: RECIPE_CATS, recipeCat: recT.get, RECIPE_TAGS: RECIPE_TAGS, recipeTag: tagT.get, hasTag: hasTag,
     durations: durations, secsLabel: secsLabel, stepIngredients: stepIngredients, STORES: STORES, storeOf: storeOf, aisleOrder: aisleOrder,
     isStaple: isStaple, scaleLine: scaleLine, searchWords: searchWords, recipeMatch: recipeMatch, normRecipe: normRecipe, ideas: ideas, idea: idea,

@@ -66,7 +66,7 @@
   async function adopt(ctx, r) {
     const id = docId("r");
     const body = { id, title: r.title, emoji: r.emoji, cat: r.cat, tags: r.tags, time: r.time, serves: r.serves, ingr: r.ingr, steps: r.steps, link: r.link, note: r.note,
-      fav: false, last: "", n: 0, by: ctx.meId || null, ts: Date.now(), up: Date.now() };
+      kitchen: r.kitchen || "", coll: r.coll || [], fav: false, last: "", n: 0, by: ctx.meId || null, ts: Date.now(), up: Date.now() };
     if (!(await ctx.act.save("recipes", body))) return null;
     ctx.say("«" + r.title + "» ist jetzt in euren Rezepten.");
     return id;
@@ -74,12 +74,14 @@
 
   /* ---------- the idea of the moment ---------- */
   const FILTERS = [["vegi", "Vegi"], ["quick", "Schnell"], ["cheap", "Günstig"]];
+  const notFlop = r => HP.noteSummary(r).mood !== "flop";
   function IdeaCard({ ctx }) {
     const own = ctx.data.recipes || [];
     const [tags, setTags] = useState([]);
     const [mine, setMine] = useState(false);
     const [cur, setCur] = useState(null);
-    const list = useMemo(() => poolOf(own).filter(r => (!mine || !r.idea) && tags.every(t => HP.hasTag(r, t))), [own, tags, mine]);
+    const [region, setRegion] = useState("");
+    const list = useMemo(() => poolOf(own).filter(r => (!mine || !r.idea) && notFlop(r) && tags.every(t => HP.hasTag(r, t)) && (!region || (r.kitchen && HP.kitchen(r.kitchen).region === region))), [own, tags, mine, region]);
     const r = (cur && list.find(x => x.id === cur)) || dailyIdea(ctx, list);
     const dice = () => {
       const others = list.filter(x => x !== r && (!x.last || HP.dayDiff(x.last, HP.today()) > 4));
@@ -94,12 +96,15 @@
           ${FILTERS.map(([t, label]) => html`<button type="button" key=${t} class="chip" aria-pressed=${String(tags.indexOf(t) >= 0)} onClick=${() => toggle(t)}><span class="emo" aria-hidden="true">${HP.recipeTag(t).emoji}</span>${label}</button>`)}
           ${own.length > 0 && html`<button type="button" class="chip" aria-pressed=${String(mine)} onClick=${() => { setCur(null); setMine(!mine); }}>Nur unsere</button>`}
         </div>
+        <div class="chips" role="group" aria-label="Küche">
+          ${HP.REGIONS.slice(0, 3).map(g => html`<button type="button" key=${g.id} class="chip" aria-pressed=${String(region === g.id)} onClick=${() => { setCur(null); setRegion(region === g.id ? "" : g.id); }}><span class="emo" aria-hidden="true">${g.emoji}</span>${g.id === "nahost" ? "Nahost" : g.label}</button>`)}
+        </div>
         ${r
           ? html`
             <button type="button" class="idea-card" onClick=${() => ctx.open({ t: "recipe", id: r.id })}>
               <span class="idea-e" aria-hidden="true">${HP.dishEmoji(r.emoji)}</span>
               <span class="idea-body">
-                <span class="idea-src">${r.idea ? "Kochidee" : r.fav ? "★ Euer Favorit" : "Aus euren Rezepten"}</span>
+                <span class="idea-src">${r.idea ? "Aus dem Rezeptbuch" + (r.kitchen ? " · " + HP.kitchen(r.kitchen).label : "") : r.fav ? "★ Euer Favorit" : "Aus euren Rezepten"}</span>
                 <span class="idea-t">${r.title}</span>
                 <span class="x-s">${metaOf(r)}${r.last ? " · " + cookedText(r) : ""}</span>
               </span>
@@ -139,14 +144,19 @@
   }
 
   /* ---------- the tab ---------- */
-  function RecipeRow({ ctx, r, hits }) {
+  function moodBadge(r) {
+    const s = HP.noteSummary(r);
+    if (!s.mood && !s.tips.length) return null;
+    return html` <span class="moodb" aria-label=${(s.mood ? "Zuletzt: " + HP.mood(s.mood).label : "") + (s.tips.length ? (s.mood ? ", " : "") + "mit Tipp fürs nächste Mal" : "")}>${s.mood ? HP.mood(s.mood).emoji : ""}${s.tips.length ? "💡" : ""}</span>`;
+  }
+  function RecipeRow({ ctx, r, hits, back, sub }) {
     const cat = HP.recipeCat(r.cat);
     return html`
-      <button type="button" class="x" onClick=${() => ctx.open({ t: "recipe", id: r.id })}>
+      <button type="button" class="x" onClick=${() => ctx.open({ t: "recipe", id: r.id, back })}>
         <span class=${"x-ic rc-" + cat.id} aria-hidden="true">${HP.dishEmoji(r.emoji)}</span>
         <span class="x-main">
-          <span class="x-t">${r.title}${r.fav && html` <span class="star" aria-label="Favorit">★</span>`}${r.idea && hits && html` <span class="tagi">Idee</span>`}</span>
-          <span class="x-s">${hits && hits.length > 1 ? "passt: " + hits.join(", ") : [metaOf(r), cookedText(r)].filter(Boolean).join(" · ")}</span>
+          <span class="x-t">${r.title}${r.fav && html` <span class="star" aria-label="Favorit">★</span>`}${moodBadge(r)}${r.idea && hits && html` <span class="tagi">Buch</span>`}</span>
+          <span class="x-s">${hits && hits.length > 1 ? "passt: " + hits.join(", ") : sub || [metaOf(r), cookedText(r)].filter(Boolean).join(" · ")}</span>
         </span>
         <span class="go"><${Icon} n="next" s=${18} /></span>
       </button>`;
@@ -154,12 +164,10 @@
   function Recipes({ ctx }) {
     const own = ctx.data.recipes;
     const [q, setQ] = useState("");
-    const [allIdeas, setAllIdeas] = useState(false);
     const words = useMemo(() => HP.searchWords(q), [q]);
     const found = useMemo(() => (words.length ? poolOf(own || []).map(r => ({ r, m: HP.recipeMatch(r, words) })).filter(x => x.m.score > 0)
       .sort((a, b) => b.m.score - a.m.score || (a.r.idea ? 1 : 0) - (b.r.idea ? 1 : 0) || a.r.title.localeCompare(b.r.title, "de")) : []), [own, words]);
     const groups = useMemo(() => HP.RECIPE_CATS.map(c => ({ c, items: (own || []).filter(r => r.cat === c.id).sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0) || a.title.localeCompare(b.title, "de")) })).filter(g => g.items.length), [own]);
-    const ideas = useMemo(() => poolOf(own || []).filter(r => r.idea), [own]);
     return html`
       <${U.TabHead} emoji="🍳" title="Rezepte">${own && own.length > 0 && html`<span class="tab-head-n">${own.length === 1 ? "1 Rezept" : own.length + " Rezepte"}</span>`}<//>
       <section class="panel import">
@@ -186,7 +194,7 @@
         </section>`}
       ${!words.length && own === null && html`<p class="status" role="status">Rezepte werden geladen …</p>`}
       ${!words.length && own && !own.length && html`
-        <${Empty} emoji="🍳📖🥕" title="Noch keine eigenen Rezepte" text="Sammelt hier, was bei euch auf den Tisch kommt: mit Zutaten, die mit einem Tipp auf der Einkaufsliste landen, und auf beliebig viele Portionen umgerechnet. Zum Start helfen die Kochideen weiter unten.">
+        <${Empty} emoji="🍳📖🥕" title="Noch keine eigenen Rezepte" text="Sammelt hier, was bei euch auf den Tisch kommt: mit Zutaten, die mit einem Tipp auf der Einkaufsliste landen, und auf beliebig viele Portionen umgerechnet. Zum Start hilft das Rezeptbuch weiter unten.">
           <button type="button" class="btn primary" onClick=${() => ctx.open({ t: "recipe-edit" })}><${Icon} n="plus" s=${18} />Rezept erfassen</button>
         <//>`}
       ${!words.length && groups.map(g => html`
@@ -194,13 +202,182 @@
           <h2 class="aisle"><span class="emo" aria-hidden="true">${g.c.emoji}</span>${g.c.label}<span class="aisle-n">${g.items.length}</span></h2>
           <div class="list">${g.items.map(r => html`<${RecipeRow} key=${r.id} ctx=${ctx} r=${r} />`)}</div>
         </section>`)}
-      ${!words.length && ideas.length > 0 && html`
-        <section class="stack">
-          <h2 class="aisle"><span class="emo" aria-hidden="true">💡</span>Kochideen<span class="aisle-n">${ideas.length}</span></h2>
-          <div class="list">${(allIdeas ? ideas : ideas.slice(0, 5)).map(r => html`<${RecipeRow} key=${r.id} ctx=${ctx} r=${r} />`)}</div>
-          ${!allIdeas && ideas.length > 5 && html`<div><button type="button" class="btn" onClick=${() => setAllIdeas(true)}><${Icon} n="down" s=${18} />Alle ${ideas.length} Ideen zeigen</button></div>`}
-          <p class="hint">Eine Idee gefällt? Öffnen und «Übernehmen»: Dann gehört sie zu euren Rezepten und lässt sich anpassen.</p>
-        </section>`}`;
+      ${!words.length && html`<${BookTeaser} ctx=${ctx} />`}`;
+  }
+
+  /* ---------- the recipe book ---------- */
+  function BookTeaser({ ctx }) {
+    const all = HP.ideas();
+    if (!all.length) return null;
+    const inColl = id => all.filter(r => r.coll.indexOf(id) >= 0).length, inRegion = id => all.filter(r => r.kitchen && HP.kitchen(r.kitchen).region === id).length;
+    return html`
+      <section class="stack book" id="hp-book">
+        <h2 class="aisle"><span class="emo" aria-hidden="true">📖</span>Rezeptbuch<span class="aisle-n">${all.length} Rezepte</span></h2>
+        <div class="book-colls">${HP.COLLECTIONS.map(c => html`
+          <button type="button" key=${c.id} class="book-coll" onClick=${() => ctx.open({ t: "book", coll: c.id })}>
+            <span class="book-e" aria-hidden="true">${c.emoji}</span>
+            <span class="x-main"><span class="x-t">${c.label}</span><span class="x-s">${inColl(c.id)} Rezepte</span></span>
+            <${Icon} n="next" s=${18} />
+          </button>`)}
+        </div>
+        <div class="quick-grid">${HP.REGIONS.map(g => html`
+          <button type="button" key=${g.id} class="qa" onClick=${() => ctx.open({ t: "book", region: g.id })}><span class="emo" aria-hidden="true">${g.emoji}</span>${g.label}<span class="qa-n">${inRegion(g.id)}</span></button>`)}
+        </div>
+        <div><button type="button" class="btn" onClick=${() => ctx.open({ t: "book" })}><${Icon} n="search" s=${18} />Ganzes Rezeptbuch durchblättern</button></div>
+        <p class="hint">Ein Rezept gefällt? Öffnen und «Übernehmen», oder einfach eine Notiz schreiben: Dann gehört es zu euren Rezepten und lässt sich anpassen.</p>
+      </section>`;
+  }
+  const BOOK_TAGS = [["vegi", "Vegi"], ["vegan", "Vegan"], ["quick", "Schnell"], ["cheap", "Günstig"], ["guests", "Für Gäste"]];
+  function BookSheet({ ctx, coll: coll0, region: region0, kitchen: kitchen0, tags: tags0, q: q0, onClose }) {
+    const [coll, setColl] = useState(coll0 || "");
+    const [region, setRegion] = useState(region0 || (kitchen0 ? HP.kitchen(kitchen0).region : ""));
+    const [kitchen, setKitchen] = useState(kitchen0 || "");
+    const [tags, setTags] = useState(tags0 || []);
+    const [cat, setCat] = useState("");
+    const [q, setQ] = useState(q0 || "");
+    const own = ctx.data.recipes || [];
+    const taken = useMemo(() => new Set(own.map(r => r.title.toLowerCase())), [own]);
+    const words = useMemo(() => HP.searchWords(q), [q]);
+    const list = useMemo(() => HP.ideas().filter(r =>
+      (!coll || r.coll.indexOf(coll) >= 0) && (!region || (r.kitchen && HP.kitchen(r.kitchen).region === region)) && (!kitchen || r.kitchen === kitchen) &&
+      (!cat || r.cat === cat) && tags.every(t => HP.hasTag(r, t)) && (!words.length || HP.recipeMatch(r, words).score === words.length)), [coll, region, kitchen, cat, tags, words]);
+    const groups = useMemo(() => {
+      if (coll) return [{ k: null, items: list }];
+      const by = {};
+      list.forEach(r => { (by[r.kitchen || "ch"] || (by[r.kitchen || "ch"] = [])).push(r); });
+      return HP.KITCHENS.filter(k => by[k.id]).map(k => ({ k, items: by[k.id].sort((a, b) => a.title.localeCompare(b.title, "de")) }));
+    }, [list, coll]);
+    const back = { t: "book", coll, region, kitchen, tags, q };
+    const c = coll ? HP.collection(coll) : null;
+    const toggleTag = t => setTags(tags.indexOf(t) >= 0 ? tags.filter(x => x !== t) : tags.concat(t));
+    const kitchens = HP.KITCHENS.filter(k => k.region === region);
+    const ownOf = r => own.find(x => same(x.title, r.title));
+    return html`
+      <${Sheet} title=${c ? c.label : region ? HP.region(region).label : "Rezeptbuch"} onClose=${onClose} closeLabel="Fertig">
+        ${c && html`<p class="hint">${c.text}</p>`}
+        <div class="search">
+          <${Icon} n="search" s=${18} />
+          <label class="sr" for="hp-book-q">Im Rezeptbuch suchen</label>
+          <input id="hp-book-q" class="input" type="search" autocomplete="off" placeholder="z. B. Poulet, Kokosmilch" value=${q} onInput=${e => setQ(e.target.value)} />
+        </div>
+        <div class="chips scroll" role="group" aria-label="Sammlung">
+          ${HP.COLLECTIONS.map(x => html`<button type="button" key=${x.id} class="chip mini" aria-pressed=${String(coll === x.id)} onClick=${() => setColl(coll === x.id ? "" : x.id)}><span class="emo" aria-hidden="true">${x.emoji}</span>${x.label}</button>`)}
+        </div>
+        <div class="chips scroll" role="group" aria-label="Weltgegend">
+          ${HP.REGIONS.map(g => html`<button type="button" key=${g.id} class="chip mini" aria-pressed=${String(region === g.id)} onClick=${() => { setKitchen(""); setRegion(region === g.id ? "" : g.id); }}><span class="emo" aria-hidden="true">${g.emoji}</span>${g.label}</button>`)}
+        </div>
+        ${kitchens.length > 1 && html`<div class="chips scroll" role="group" aria-label="Küche">
+          ${kitchens.map(k => html`<button type="button" key=${k.id} class="chip mini" aria-pressed=${String(kitchen === k.id)} onClick=${() => setKitchen(kitchen === k.id ? "" : k.id)}><span class="emo" aria-hidden="true">${k.emoji}</span>${k.label}</button>`)}
+        </div>`}
+        <div class="chips scroll" role="group" aria-label="Merkmale">
+          ${BOOK_TAGS.map(([t, label]) => html`<button type="button" key=${t} class="chip mini" aria-pressed=${String(tags.indexOf(t) >= 0)} onClick=${() => toggleTag(t)}><span class="emo" aria-hidden="true">${HP.recipeTag(t).emoji}</span>${label}</button>`)}
+          <select class="select mini" aria-label="Art des Gerichts" value=${cat} onChange=${e => setCat(e.target.value)}>
+            <option value="">Alle Gänge</option>
+            ${HP.RECIPE_CATS.filter(x => x.id !== "other").map(x => html`<option value=${x.id}>${x.emoji} ${x.label}</option>`)}
+          </select>
+        </div>
+        <p class="hint" aria-live="polite">${list.length ? (list.length === 1 ? "1 Rezept" : list.length + " Rezepte") : "Kein Rezept passt zu dieser Auswahl."}</p>
+        ${groups.map(g => html`
+          <section class="stack" key=${g.k ? g.k.id : "all"}>
+            ${g.k && html`<h2 class="aisle"><span class="emo" aria-hidden="true">${g.k.emoji}</span>${g.k.label}<span class="aisle-n">${g.items.length}</span></h2>`}
+            <div class="list">${g.items.map(r => {
+              const mine = taken.has(r.title.toLowerCase()) ? ownOf(r) : null;
+              return html`<${RecipeRow} key=${r.id} ctx=${ctx} r=${mine || r} back=${back} sub=${(mine ? "✓ Bei euren Rezepten · " : "") + metaOf(r) + (c && r.kitchen ? " · " + HP.kitchen(r.kitchen).label : "")} />`;
+            })}</div>
+          </section>`)}
+      <//>`;
+  }
+
+  /* ---------- notes: how was it, and what to do differently next time ---------- */
+  const noteId = () => "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  /* Saves a note. A built-in idea is taken over first: the note belongs to the household's own copy. Returns the recipe id. */
+  async function addNote(ctx, r, note) {
+    let id = r.id;
+    if (r.idea) { id = await adopt(ctx, r); if (!id) return null; }
+    const body = Object.assign({ by: ctx.meId || null, at: Date.now(), d: HP.today() }, note);
+    return (await ctx.act.patch("recipes", id, { notes: { [noteId()]: body }, up: Date.now() })) ? id : null;
+  }
+  function MoodPick({ value, onChange, id }) {
+    return html`<div class="chips" role="radiogroup" aria-labelledby=${id}>${HP.MOODS.map(m => html`
+      <button type="button" key=${m.id} role="radio" class="chip" aria-checked=${String(value === m.id)} onClick=${() => onChange(value === m.id ? "" : m.id)}><span class="emo" aria-hidden="true">${m.emoji}</span>${m.label}</button>`)}</div>`;
+  }
+  function NoteRow({ ctx, r, n }) {
+    const [armed, setArmed] = useState(false);
+    const [busy, run] = useBusy();
+    useEffect(() => { if (!armed) return; const t = setTimeout(() => setArmed(false), 4000); return () => clearTimeout(t); }, [armed]);
+    const m = n.by ? ctx.who(n.by) : null;
+    const del = () => run(() => ctx.act.patch("recipes", r.id, { notes: { [n.id]: null }, up: Date.now() }));
+    return html`
+      <li class=${"rnote" + (n.tip ? " tip" : "")}>
+        ${m ? html`<${Av} m=${m} s=${1} />` : html`<span class="emo" aria-hidden="true">📝</span>`}
+        <div class="rnote-b">
+          <p class="rnote-h">${n.mood && html`<span class="mood"><span class="emo" aria-hidden="true">${HP.mood(n.mood).emoji}</span>${HP.mood(n.mood).label}</span>`}${n.tip && html`<span class="mood tipb"><span class="emo" aria-hidden="true">💡</span>Nächstes Mal</span>`}</p>
+          ${n.text && html`<p class="rnote-t">${n.text}</p>`}
+          <p class="meta">${[m ? m.name : "", n.d ? HP.fmtDate(n.d, { day: "numeric", month: "short", year: "numeric" }) : ""].filter(Boolean).join(" · ")}</p>
+        </div>
+        ${!r.idea && html`<button type="button" class="icon-btn" disabled=${busy} aria-label=${armed ? "Wirklich löschen? Nochmal tippen" : "Notiz löschen"} onClick=${() => (armed ? del() : setArmed(true))}><${Icon} n=${armed ? "check" : "trash"} s=${18} /></button>`}
+      </li>`;
+  }
+  function RecipeNotes({ ctx, r }) {
+    const [open, setOpen] = useState(false);
+    const [mood, setMood] = useState("");
+    const [text, setText] = useState("");
+    const [tip, setTip] = useState(false);
+    const [err, setErr] = useState(null);
+    const [busy, run] = useBusy();
+    const notes = r.notes || [], sum = HP.noteSummary(r);
+    const save = () => run(async () => {
+      const t = text.trim().slice(0, 500);
+      if (!t && !mood) { setErr("Wähl, wie es war, oder schreib ein paar Worte."); return; }
+      const id = await addNote(ctx, r, { text: t, mood, tip: tip && !!t });
+      if (!id) return;
+      setOpen(false); setMood(""); setText(""); setTip(false); setErr(null);
+      ctx.say(tip && t ? "Notiert. Beim nächsten Kochen steht es im Kochmodus." : "Notiert. Danke!");
+      if (r.idea) ctx.open({ t: "recipe", id });
+    });
+    return html`
+      <div class="field" id="hp-notes">
+        <div class="rc-sub">
+          <span class="label">Eure Notizen${notes.length ? " (" + notes.length + ")" : ""}</span>
+          ${(sum.top || sum.ok || sum.flop) > 0 && html`<span class="hint" aria-label="Bewertungen">${HP.MOODS.filter(m => sum[m.id]).map(m => m.emoji + " " + sum[m.id]).join("  ")}</span>`}
+        </div>
+        ${notes.length > 0 && html`<ul class="rnotes">${notes.slice(0, 30).map(n => html`<${NoteRow} key=${n.id} ctx=${ctx} r=${r} n=${n} />`)}</ul>`}
+        ${!open
+          ? html`<div><button type="button" class="btn" onClick=${() => setOpen(true)}><span class="emo" aria-hidden="true">📝</span>${notes.length ? "Notiz schreiben" : "Wie war's? Notiz schreiben"}</button></div>`
+          : html`
+            <div class="note-form">
+              <span class="label" id="hp-rn-mood">Wie war's?</span>
+              <${MoodPick} id="hp-rn-mood" value=${mood} onChange=${v => { setErr(null); setMood(v); }} />
+              <label class="label sub" for="hp-rn-text">Notiz</label>
+              <textarea id="hp-rn-text" class="input area" rows="3" maxlength="500" placeholder="z. B. Doppelte Menge Sauce, 5 Minuten weniger im Ofen, mit Jasminreis noch besser" value=${text} onInput=${e => { setErr(null); setText(e.target.value); }}></textarea>
+              <label class="check"><input type="checkbox" checked=${tip} onChange=${e => setTip(e.target.checked)} /><span>Das mache ich nächstes Mal anders (steht dann im Kochmodus)</span></label>
+              ${err && html`<p class="err" role="alert">${err}</p>`}
+              ${r.idea && html`<p class="hint">Mit der Notiz kommt die Kochidee zu euren Rezepten.</p>`}
+              <div class="btn-row">
+                <button type="button" class="btn primary" disabled=${busy} onClick=${save}>Notiz speichern</button>
+                <button type="button" class="btn" disabled=${busy} onClick=${() => { setOpen(false); setErr(null); }}>Abbrechen</button>
+              </div>
+            </div>`}
+      </div>`;
+  }
+  /* Recipes that go in the same direction: the same collection or kitchen, the same kind of dish, shared main ingredients. */
+  function mainWords(r) {
+    const out = new Set();
+    r.title.toLowerCase().split(/[^a-zäöüéèàç]+/).forEach(w => { if (w.length >= 4) out.add(w.slice(0, 6)); });
+    r.ingr.slice(0, 6).forEach(l => { if (!HP.isStaple(l)) { const w = HP.splitQty(l).name.toLowerCase().split(/[\s,(]+/).filter(x => x.length >= 4).pop(); if (w) out.add(w.slice(0, 6)); } });
+    return out;
+  }
+  function similar(ctx, r, max) {
+    const mine = mainWords(r);
+    return poolOf(ctx.data.recipes || []).filter(x => x.id !== r.id && x.title !== r.title).map(x => {
+      let sc = 0;
+      (x.coll || []).forEach(c => { if ((r.coll || []).indexOf(c) >= 0) sc += 4; });
+      if (x.kitchen && x.kitchen === r.kitchen) sc += 2;
+      if (x.emoji === r.emoji) sc += 2;
+      if (x.cat === r.cat) sc += 1;
+      mainWords(x).forEach(w => { if (mine.has(w)) sc += 1.5; });
+      return { x, sc };
+    }).filter(o => o.sc >= 4).sort((a, b) => b.sc - a.sc || a.x.title.localeCompare(b.x.title, "de")).slice(0, max).map(o => o.x);
   }
 
   /* ---------- one recipe, to cook from ---------- */
@@ -219,6 +396,8 @@
       if (await act.patch("recipes", r.id, { last: HP.today(), n: (r.n || 0) + 1, up: Date.now() })) say("En Guete! 😋 «" + r.title + "» ist als gekocht notiert.");
     });
     const fav = () => run(() => act.patch("recipes", r.id, { fav: !r.fav, up: Date.now() }));
+    const sum = HP.noteSummary(r), alike = useMemo(() => similar(ctx, r, 4), [r, ctx.data.recipes]);
+    const kit = r.kitchen ? HP.kitchen(r.kitchen) : null;
     return html`
       <${Sheet} title=${r.title} onClose=${onClose} closeLabel="Fertig"
         action=${r.idea
@@ -227,13 +406,19 @@
         <div class="rc-hero">
           <span class=${"rc-e rc-" + r.cat} aria-hidden="true">${HP.dishEmoji(r.emoji)}</span>
           <div class="stack">
-            <span class="hint">${r.idea ? "Kochidee" : HP.recipeCat(r.cat).label}${r.time ? " · " + timeOf(r) : ""}</span>
+            <span class="hint">${r.idea ? "Aus dem Rezeptbuch" : HP.recipeCat(r.cat).label}${kit ? " · " + kit.emoji + " " + kit.label : ""}${r.time ? " · " + timeOf(r) : ""}</span>
+            ${sum.mood && html`<span class="hint">${HP.mood(sum.mood).emoji} Zuletzt: ${HP.mood(sum.mood).label}</span>`}
             ${r.tags.length > 0 && html`<div class="chips">${r.tags.map(t => html`<span key=${t} class="chip static mini"><span class="emo" aria-hidden="true">${HP.recipeTag(t).emoji}</span>${HP.recipeTag(t).label}</span>`)}</div>`}
           </div>
         </div>
         ${fresh && html`
           <div class="note fresh"><span class="emo" aria-hidden="true">✨</span><div class="stack">
             <p><strong>Gespeichert.</strong> Was jetzt? Zutaten auf die Einkaufsliste${store ? " für " + store.label : ""}, einplanen oder gleich loskochen.</p>
+          </div></div>`}
+        ${sum.tips.length > 0 && html`
+          <div class="note tipnote"><span class="emo" aria-hidden="true">💡</span><div class="stack">
+            <p><strong>Nächstes Mal anders</strong></p>
+            <ul class="tips">${sum.tips.slice(0, 3).map(n => html`<li key=${n.id}>${n.text}${n.by ? html` <span class="muted">– ${who(n.by).name}</span>` : ""}</li>`)}</ul>
           </div></div>`}
         ${r.steps.length > 0 && html`<button type="button" class="btn primary block cook-go" onClick=${() => open({ t: "cook", id: r.id, serves })}><span class="emo" aria-hidden="true">👩‍🍳</span>Kochmodus starten</button>`}
         ${planEv && html`
@@ -270,6 +455,12 @@
           </div>`}
         ${r.note.trim() && html`<div class="field"><span class="label">Notiz</span><p class="note-text">${r.note}</p></div>`}
         ${r.link && html`<div><a class="btn small" href=${r.link} target="_blank" rel="noopener noreferrer"><${Icon} n="ext" s=${16} />Zum Originalrezept</a></div>`}
+        <${RecipeNotes} ctx=${ctx} r=${r} />
+        ${alike.length > 0 && html`
+          <div class="field">
+            <span class="label">In dieselbe Richtung</span>
+            <div class="list">${alike.map(x => html`<${RecipeRow} key=${x.id} ctx=${ctx} r=${x} />`)}</div>
+          </div>`}
         ${!r.ingr.length && !r.steps.length && !r.note.trim() && html`<p class="hint">Noch keine Zutaten und Schritte. ${r.idea ? "" : "Tippe oben auf «Bearbeiten»."}</p>`}
         <div class="foot">
           <button type="button" class="btn block" onClick=${() => open({ t: "meal", rid: r.id })}><${Icon} n="plus" s=${18} />Einplanen</button>
@@ -290,8 +481,8 @@
     const { act, say, meId } = ctx;
     const isNew = !r, from = r || draft;
     const [d, setD] = useState(() => from
-      ? { title: from.title, emoji: from.emoji, cat: from.cat, tags: from.tags.slice(), time: from.time ? String(from.time) : "", serves: from.serves, ingr: from.ingr.join("\n"), steps: from.steps.join("\n"), link: from.link, note: from.note }
-      : { title: "", emoji: "teller", cat: "main", tags: [], time: "", serves: 4, ingr: "", steps: "", link: "", note: "" });
+      ? { title: from.title, emoji: from.emoji, cat: from.cat, tags: from.tags.slice(), time: from.time ? String(from.time) : "", serves: from.serves, ingr: from.ingr.join("\n"), steps: from.steps.join("\n"), link: from.link, note: from.note, kitchen: from.kitchen || "" }
+      : { title: "", emoji: "teller", cat: "main", tags: [], time: "", serves: 4, ingr: "", steps: "", link: "", note: "", kitchen: "" });
     const [err, setErr] = useState(null);
     const [busy, run] = useBusy();
     const set = p => { setErr(null); setD(prev => Object.assign({}, prev, p)); };
@@ -302,7 +493,7 @@
       if (!title) { setErr("Gib dem Rezept einen Namen."); return; }
       if (link && !HP.okUrl(link)) { setErr("Der Link ist keine vollständige Adresse. Sie beginnt mit https:// oder http://."); return; }
       if (d.time.trim() && !(time >= 0 && time <= 1440)) { setErr("Gib die Zeit in Minuten an, zum Beispiel 30."); return; }
-      const fields = { title: title.slice(0, 80), emoji: d.emoji, cat: d.cat, tags: d.tags, time: time || 0, serves: d.serves, ingr: lines(d.ingr, 60, 120), steps: lines(d.steps, 40, 600), link, note: d.note.slice(0, 2000), up: Date.now() };
+      const fields = { title: title.slice(0, 80), emoji: d.emoji, cat: d.cat, tags: d.tags, time: time || 0, serves: d.serves, ingr: lines(d.ingr, 60, 120), steps: lines(d.steps, 40, 600), link, note: d.note.slice(0, 2000), kitchen: HP.isKitchen(d.kitchen) ? d.kitchen : "", up: Date.now() };
       if (isNew) {
         const id = docId("r");
         if (await act.save("recipes", Object.assign({ id, fav: false, last: "", n: 0, by: meId || null, ts: Date.now() }, fields))) { say(draft ? "Rezept übernommen. Jetzt einkaufen oder gleich kochen." : "Rezept gespeichert."); onSaved(id, !!draft); }
@@ -328,6 +519,13 @@
           </div>
         </div>
         <${KindPick} id="hp-rc-cat" label="Art" list=${HP.RECIPE_CATS} value=${d.cat} onChange=${cat => set({ cat })} />
+        <div class="field">
+          <label for="hp-rc-kitchen">Küche (optional)</label>
+          <select id="hp-rc-kitchen" class="select" value=${d.kitchen} onChange=${e => set({ kitchen: e.target.value })}>
+            <option value="">–</option>
+            ${HP.REGIONS.map(g => html`<optgroup key=${g.id} label=${g.label}>${HP.KITCHENS.filter(k => k.region === g.id).map(k => html`<option value=${k.id}>${k.label}</option>`)}</optgroup>`)}
+          </select>
+        </div>
         <div class="field">
           <span class="label" id="hp-rc-tags">Merkmale</span>
           <div class="chips" role="group" aria-labelledby="hp-rc-tags">${HP.RECIPE_TAGS.map(t => html`
@@ -524,5 +722,5 @@
       <//>`;
   }
 
-  Object.assign(U, { Recipes, RecipeView, RecipeForm, MealSheet, ImportSheet, findRecipe, dailyIdea, recipeMeta: metaOf });
+  Object.assign(U, { Recipes, RecipeView, RecipeForm, MealSheet, ImportSheet, BookSheet, MoodPick, addNote, adoptRecipe: adopt, findRecipe, dailyIdea, recipeMeta: metaOf });
 })();

@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   var root = document.getElementById("app"), P = window.htmPreact, HP = window.HP, Store = window.HPStore, U = window.HPUI;
-  if (!P || !HP || !Store || !window.HPRates || !U || !U.Kasse || !U.Shopping || !U.Calendar || !U.Plants || !U.Infos || !U.Recipes || !U.CookMode || !window.HPImport) {
+  if (!P || !HP || !Store || !window.HPRates || !U || !U.Kasse || !U.Shopping || !U.Calendar || !U.Plants || !U.Infos || !U.Recipes || !U.CookMode || !window.HPImport || !window.HPIcs || !U.CalSync) {
     var bs = document.getElementById("boot-status");
     if (bs) bs.textContent = "Der Home-Planer konnte nicht geladen werden. Prüf die Verbindung und lade die Seite neu.";
     return;
@@ -1196,11 +1196,15 @@
         else if (s.t === "transfer") sheetEl = html`<${U.TransferForm} key=${s.k} home=${h} transfer=${s.e || null} preset=${s.preset} meId=${meId} act=${act} onClose=${close} say=${say} />`;
         else if (s.t === "item") sheetEl = html`<${U.ItemSheet} key=${s.k} ctx=${ctx} it=${findIn("shopping", s.it.id, s.it)} onClose=${close} />`;
         else if (s.t === "aisles") sheetEl = html`<${U.AislesSheet} key=${s.k} ctx=${ctx} onClose=${close} />`;
+        else if (s.t === "calsync") sheetEl = html`<${U.CalSync} key=${s.k} ctx=${ctx} onClose=${close} />`;
+        else if (s.t === "calimport") sheetEl = html`<${U.CalImport} key=${s.k} ctx=${ctx} onClose=${close} />`;
         else if (s.t === "event") sheetEl = html`<${U.EventForm} key=${s.k} ctx=${ctx} ev=${s.e ? findIn("events", s.e.id, s.e) : null} date=${s.date} at=${s.at} onClose=${close} />`;
         else if (s.t === "recipe") {
           const r = U.findRecipe(ctx, s.id);
-          if (r) sheetEl = html`<${U.RecipeView} key=${s.k} ctx=${ctx} r=${r} plan=${s.plan} fresh=${s.fresh} onClose=${close} />`;
+          if (r) sheetEl = html`<${U.RecipeView} key=${s.k} ctx=${ctx} r=${r} plan=${s.plan} fresh=${s.fresh}
+            onClose=${() => (s.back ? setSheet(Object.assign({}, s.back, { k: newId() })) : close())} />`;
         }
+        else if (s.t === "book") sheetEl = html`<${U.BookSheet} key=${s.k} ctx=${ctx} coll=${s.coll} region=${s.region} kitchen=${s.kitchen} tags=${s.tags} q=${s.q} onClose=${close} />`;
         /* Editing a recipe that was open leads back to it; a new one opens once it is saved. */
         else if (s.t === "recipe-edit") sheetEl = html`<${U.RecipeForm} key=${s.k} ctx=${ctx} r=${s.r ? findIn("recipes", s.r.id, s.r) : null} draft=${s.draft} source=${s.source} how=${s.how}
           onClose=${deleted => (s.r && !deleted ? setSheet({ t: "recipe", id: s.r.id, k: newId() }) : close())}
@@ -1211,7 +1215,7 @@
         /* Cooking mode lies over everything; closing it leads back to the recipe. */
         else if (s.t === "cook") {
           const r = U.findRecipe(ctx, s.id);
-          if (r) sheetEl = html`<${U.CookMode} key=${s.k} ctx=${ctx} r=${r} serves=${s.serves} onClose=${() => setSheet({ t: "recipe", id: s.id, k: newId() })} />`;
+          if (r) sheetEl = html`<${U.CookMode} key=${s.k} ctx=${ctx} r=${r} serves=${s.serves} onClose=${nid => setSheet({ t: "recipe", id: typeof nid === "string" ? nid : s.id, k: newId() })} />`;
         }
         else if (s.t === "meal") sheetEl = html`<${U.MealSheet} key=${s.k} ctx=${ctx} date=${s.date} rid=${s.rid} onClose=${close} />`;
         else if (s.t === "plant") sheetEl = html`<${U.PlantForm} key=${s.k} ctx=${ctx} p=${s.p ? findIn("plants", s.p.id, s.p) : null} onClose=${close} />`;

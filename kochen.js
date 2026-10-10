@@ -84,6 +84,10 @@
     const [aloud, setAloud] = useState(false);
     const [armed, setArmed] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [mood, setMood] = useState("");
+    const [note, setNote] = useState("");
+    const [tip, setTip] = useState(true);
+    const tips = useMemo(() => HP.noteSummary(r).tips.slice(0, 3), [r]);
     const alarm = useAlarm(), awake = useWakeLock();
     const touch = useRef(null), ref = useRef(null);
     const factor = serves / r.serves, lines = useMemo(() => r.ingr.map(l => HP.scaleLine(l, factor)), [r.ingr, factor]);
@@ -145,11 +149,21 @@
       if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
     };
     const toggleBig = () => { ls.set("hp.cook.big", !big); setBig(!big); };
-    const cooked = async () => {
+    /* At the end: cooked today, and optionally how it was and what to do differently next time.
+       A built-in idea is taken over first, so the note has a place in the household's own recipes. */
+    const already = !r.idea && r.last === HP.today();
+    const finish = async () => {
+      const t = note.trim().slice(0, 500), withNote = !!(mood || t);
+      if (already && !withNote) { onClose(); return; }
       setBusy(true);
-      const ok = await ctx.act.patch("recipes", r.id, { last: HP.today(), n: (r.n || 0) + 1, up: Date.now() });
+      let id = r.id;
+      if (r.idea) { id = await U.adoptRecipe(ctx, r); if (!id) { setBusy(false); return; } }
+      const patch = { up: Date.now() };
+      if (!already) { patch.last = HP.today(); patch.n = (r.idea ? 0 : r.n || 0) + 1; }
+      if (withNote) patch.notes = { ["n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)]: { by: ctx.meId || null, at: Date.now(), d: HP.today(), text: t, mood, tip: tip && !!t } };
+      const ok = await ctx.act.patch("recipes", id, patch);
       setBusy(false);
-      if (ok) { ctx.say("En Guete! 😋 «" + r.title + "» ist als gekocht notiert."); onClose(); }
+      if (ok) { ctx.say(tip && t ? "En Guete! 😋 Notiert, auch fürs nächste Mal." : "En Guete! 😋 «" + r.title + "» ist als gekocht notiert."); onClose(id); }
     };
     const pct = n ? Math.round(Math.min(i, n + 1) / (n + 1) * 100) : 100;
     const label = i === 0 ? "Bereitstellen" : i <= n ? "Schritt " + i + " von " + n : "Fertig";
@@ -168,6 +182,11 @@
           ${i === 0 && html`
             <section class="cook-card">
               <h2 class="cook-h">Zuerst bereitstellen</h2>
+              ${tips.length > 0 && html`
+                <div class="note tipnote"><span class="emo" aria-hidden="true">💡</span><div class="stack">
+                  <p><strong>Vom letzten Mal</strong></p>
+                  <ul class="tips">${tips.map(n => html`<li key=${n.id}>${n.text}${n.by ? html` <span class="muted">– ${ctx.who(n.by).name}</span>` : ""}</li>`)}</ul>
+                </div></div>`}
               <div class="rc-sub">
                 <span class="hint">${awake ? "Der Bildschirm bleibt an, solange der Kochmodus offen ist." : "Tipp: Stell die automatische Bildschirmsperre fürs Kochen ab."}</span>
                 <span class="stepper" role="group" aria-label="Portionen">
@@ -201,10 +220,17 @@
             <section class="cook-card cook-done">
               <span class="cook-party" aria-hidden="true">🎉</span>
               <h2 class="cook-h">Fertig! En Guete</h2>
-              <p class="hint">${r.idea ? "Hat es geschmeckt? Übernimm das Rezept, dann gehört es zu euren Rezepten." : "Merk dir, dass ihr das heute gekocht habt: Dann schlägt es der Würfel ein paar Tage nicht vor."}</p>
+              <div class="cook-rate">
+                <span class="label" id="hp-ck-mood">Wie war's?</span>
+                <${U.MoodPick} id="hp-ck-mood" value=${mood} onChange=${setMood} />
+                <label class="label sub" for="hp-ck-note">Was machst du nächstes Mal anders? (optional)</label>
+                <textarea id="hp-ck-note" class="input area" rows="2" maxlength="500" placeholder="z. B. Mehr Glasur, Reis 2 Minuten länger" value=${note} onInput=${e => setNote(e.target.value)}></textarea>
+                ${note.trim() && html`<label class="check"><input type="checkbox" checked=${tip} onChange=${e => setTip(e.target.checked)} /><span>Beim nächsten Kochen hier anzeigen</span></label>`}
+              </div>
+              <p class="hint">${r.idea ? "Mit dem Speichern kommt das Rezept zu euren Rezepten." : "Als gekocht gemerkt schlägt der Würfel es ein paar Tage nicht vor."}</p>
               <div class="btn-row center">
-                ${!r.idea && html`<button type="button" class="btn primary" disabled=${busy || r.last === HP.today()} onClick=${cooked}><span class="emo" aria-hidden="true">😋</span>${r.last === HP.today() ? "Heute gekocht" : "Als gekocht merken"}</button>`}
-                <button type="button" class="btn" onClick=${onClose}>Schliessen</button>
+                <button type="button" class="btn primary" disabled=${busy || (already && !mood && !note.trim())} onClick=${finish}><span class="emo" aria-hidden="true">😋</span>${already ? "Notiz speichern" : "Als gekocht merken"}</button>
+                <button type="button" class="btn" onClick=${() => onClose()}>Schliessen</button>
               </div>
             </section>`}
         </main>

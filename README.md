@@ -1,14 +1,14 @@
 # Home-Planer
 
-Euer Haushalt an einem Ort, als Web-App fürs Handy: gemeinsame Kasse, Einkaufsliste für Migros oder Coop, Rezepte mit Kochmodus, Kalender, Giessplan für die Pflanzen und wichtige Infos wie Mietvertrag und Versicherungen. Die App läuft im Browser, lässt sich aufs Handy legen und startet auch ohne Netz. Gebaut auf der Grundlage der Ferienkasse ([Splite-weiser](https://github.com/marcesss97/Splite-weiser)): gleiches Aussehen, gleicher Gruppen-Sync, gleiche Bedienung.
+Euer Haushalt an einem Ort, als Web-App fürs Handy: gemeinsame Kasse, Einkaufsliste für Migros oder Coop, Rezeptbuch mit Kochmodus, Kalender mit Anschluss an Outlook und das iPhone, Giessplan für die Pflanzen und wichtige Infos wie Mietvertrag und Versicherungen. Die App läuft im Browser, lässt sich aufs Handy legen und startet auch ohne Netz. Gebaut auf der Grundlage der Ferienkasse ([Splite-weiser](https://github.com/marcesss97/Splite-weiser)): gleiches Aussehen, gleicher Gruppen-Sync, gleiche Bedienung.
 
 | Bereich | Was er kann |
 |---|---|
 | 🏠 **Start** | Was heute ansteht (Termine, geplantes Essen, durstige Pflanzen, Fristen), eine Kochidee, die nächsten Tage, die Einkaufsliste zum schnellen Ergänzen und das eigene Saldo der Kasse |
 | 💰 **Kasse** | Wer hat was bezahlt, wer schuldet wem? Aufteilen gleich, nach Anteilen, nach Beträgen oder nach Positionen; Abrechnung mit möglichst wenigen Zahlungen; Statistik pro Monat und Kategorie; fremde Währungen zum Tageskurs |
 | 🛒 **Einkauf** | Eine Zeile genügt («2 Liter Milch»); jeder Artikel landet von selbst in seiner Abteilung. Für Migros oder Coop sortiert in der Reihenfolge des Ladens (anpassbar an eure Filiale), mit Suche im Onlineshop. Abhaken im Laden, Abgehaktes mit einem Tipp wieder auf die Liste, die Liste teilen, und danach «Als Ausgabe erfassen» |
-| 🍳 **Rezepte** | Rezepte aus einem Link, einem Screenshot oder einem kopierten Text übernehmen: Die App erkennt Zutaten, Schritte, Zeit und Portionen von selbst. Der **Kochmodus** führt Schritt für Schritt durchs Rezept, mit Timern, Vorlesen und Bildschirm, der anbleibt. Dazu eure Rezeptsammlung und 26 eingebaute Kochideen. «Was koche ich heute?» würfelt eine Idee, die Suche findet Rezepte zu dem, was im Kühlschrank ist. Auf andere Portionen umrechnen, Zutaten mit einem Tipp auf die Einkaufsliste, Wochenplan mit «Wer kocht?» |
-| 📅 **Kalender** | Monatsansicht und «Demnächst». Termine über mehrere Tage, mit Uhrzeit, wiederkehrend (wöchentlich, alle 2 Wochen, monatlich, jährlich), einzelne Wiederholungen streichbar. Arten wie Abfuhr, Geburtstag, Besuch, Ferien |
+| 🍳 **Rezepte** | Rezepte aus einem Link, einem Screenshot oder einem kopierten Text übernehmen: Die App erkennt Zutaten, Schritte, Zeit und Portionen von selbst. Der **Kochmodus** führt Schritt für Schritt durchs Rezept, mit Timern, Vorlesen und Bildschirm, der anbleibt. Ein **Rezeptbuch** mit über 150 Rezepten aus Asien, Europa, Nahost und Amerika, mit den Sammlungen «Glasiertes Poulet mit Reis» und «Im Stil von Ottolenghi». Zu jedem Rezept **Notizen**: wie es war (😋 🙂 😕) und was ihr nächstes Mal anders macht; das steht dann im Kochmodus. «Was koche ich heute?» würfelt eine Idee, die Suche findet Rezepte zu dem, was im Kühlschrank ist. Auf andere Portionen umrechnen, Zutaten mit einem Tipp auf die Einkaufsliste, Wochenplan mit «Wer kocht?» |
+| 📅 **Kalender** | Monatsansicht und «Demnächst». Termine über mehrere Tage, mit Uhrzeit, wiederkehrend (wöchentlich, alle 2 Wochen, monatlich, jährlich), einzelne Wiederholungen streichbar. Arten wie Abfuhr, Geburtstag, Besuch, Ferien. **In Outlook und im iPhone-Kalender** als Abo, das sich selbst aktualisiert, oder als Datei; Termine aus Outlook-Dateien übernehmen |
 | 🪴 **Pflanzen** | Jede Pflanze mit ihrem Rhythmus. Die durstigsten zuerst, ein Tipp auf 💧 notiert, wer heute gegossen hat. Düngen, Raum, Zuständigkeit und Verlauf |
 | 📁 **Infos** | Mietvertrag, Versicherungen, Abos, Kontakte, WLAN, Entsorgung: Vorlagen mit den üblichen Feldern, Kopieren mit einem Tipp, Telefonnummern zum Antippen, Links zu Dokumenten, Fristen mit Erinnerung in der Übersicht |
 
@@ -17,6 +17,7 @@ Dieses README führt zuerst durch drei Schritte und dient danach zum Nachschlage
 1. [Veröffentlichen auf GitHub](#1-veröffentlichen-auf-github): 3 Minuten.
 2. [Gruppen-Sync einschalten](#2-gruppen-sync-einschalten): 2 Minuten, wenn ihr das Firebase-Projekt der Ferienkasse mitbenutzt.
 3. [Probelauf](#3-probelauf): 5 Minuten zu zweit.
+4. [Kalender in Outlook und auf dem iPhone](#4-kalender-in-outlook-und-auf-dem-iphone): einmal 10 Minuten bei Cloudflare, freiwillig.
 
 Zum Nachschlagen: [Die Bereiche im Detail](#die-bereiche-im-detail) · [Wer sieht was?](#wer-sieht-was-sicherheit-und-daten) · [Sicherung](#sicherung) · [iPhone](#besonderheiten-auf-dem-iphone) · [Anpassen](#anpassen-und-aktualisieren) · [Tests](#tests) · [Was geprüft ist](#was-geprüft-ist-und-was-nicht) · [Lizenzen](#lizenzen)
 
@@ -62,13 +63,41 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 1. Einstellungen, «Verbindung prüfen»: Es erscheint «Die Verbindung steht».
 2. Haushalt anlegen, oben «Einladen», das zweite Handy öffnet den Link oder scannt den QR-Code. Beide tippen auf das Fragezeichen auf dem Band und wählen ihren Namen.
 3. Ein Handy setzt «Milch» auf die Einkaufsliste, das andere hakt sie ab. Beides erscheint ohne Neuladen auf dem anderen Handy.
-4. Unter «Rezepte» eine Kochidee öffnen, «Übernehmen» und «Einplanen»: Das Rezept und das geplante Essen erscheinen auf dem anderen Handy.
+4. Unter «Rezepte» im Rezeptbuch «Glasiertes Poulet mit Reis» öffnen, ein Rezept wählen, «Übernehmen» und «Einplanen»: Das Rezept und das geplante Essen erscheinen auf dem anderen Handy. Eine Notiz dazu («Wie war's?») sieht das andere Handy auch.
 5. Unter «Rezepte» auf «Aus Link» tippen und die Adresse eines Rezepts von Fooby, Migusto oder Betty Bossi einfügen: Nach ein paar Sekunden steht das Rezept zum Prüfen da. «Speichern», dann «Kochmodus starten» und bei einem Schritt mit Zeitangabe den Timer antippen.
 6. Einen Screenshot eines Rezepts (etwa aus Instagram) über «Screenshot» wählen: Zutaten und Schritte erscheinen im Formular.
 7. Auf der Einkaufsliste «Migros» oder «Coop» wählen: Die Abteilungen stehen in der Reihenfolge des Ladens.
 8. Eine Pflanze eintragen und auf 💧 tippen: Auf dem anderen Handy steht «Gegossen».
 9. Ein Handy in den Flugmodus, eine Ausgabe eintragen, Flugmodus aus: Die Ausgabe erscheint drüben.
 10. Probe-Haushalt wieder löschen: Regler-Symbol im Haushalt, «Haushalt für alle löschen».
+
+## 4. Kalender in Outlook und auf dem iPhone
+
+Die Termine des Haushalts erscheinen in eurem eigenen Kalender, auf dem iPhone, in Outlook (privat oder bei der Arbeit) und in Google Kalender, und bleiben von selbst aktuell. Das läuft über ein **Kalender-Abo**: Der Kalender holt sich die Termine regelmässig über einen Link. Diesen Link liefert ein kleiner Kalender-Dienst, der einmal eingerichtet wird. Er läuft kostenlos bei Cloudflare (Tarif «Free», 100'000 Abrufe pro Tag) und braucht den Gruppen-Sync.
+
+1. Auf [dash.cloudflare.com](https://dash.cloudflare.com/sign-up) ein kostenloses Konto anlegen (E-Mail genügt, keine Kreditkarte).
+2. Links «Workers & Pages» (oder «Compute», «Workers»), «Create», «Start with Hello World». Als Namen etwa `home-planer-kalender`, dann «Deploy».
+3. «Edit code»: den ganzen Beispielcode löschen, den ganzen Inhalt der Datei [`kalender-worker.js`](kalender-worker.js) aus diesem Repository einfügen, «Deploy».
+4. Zurück beim Worker «Settings», «Variables and Secrets», «Add»: Typ «Secret», Name `KALENDER_SCHLUESSEL`, als Wert eine lange Zufallszeichenfolge (mindestens 32 Zeichen, etwa aus einem Passwort-Generator). Speichern beziehungsweise «Deploy». Den Wert braucht ihr danach nie mehr.
+5. Oben steht die Adresse des Dienstes, etwa `https://home-planer-kalender.marc.workers.dev`. Wer sie im Browser öffnet, sieht «Home-Planer Kalender-Dienst: bereit.»
+6. Auf GitHub die Datei `config.js` öffnen und die Adresse eintragen: `const kalenderDienst = "https://home-planer-kalender.marc.workers.dev";`, dann «Commit changes».
+
+Danach im Home-Planer: «Kalender», oben «Outlook & iPhone».
+
+- **iPhone:** «Im iPhone-Kalender abonnieren» antippen, dann «Abonnieren». Wie oft das iPhone nachschaut, steht unter Einstellungen › Kalender › Accounts › Abonnierte Kalender › «Abrufen».
+- **Outlook privat (outlook.com, Hotmail):** «In Outlook abonnieren (privat)». **Outlook bei der Arbeit (Microsoft 365):** «In Outlook abonnieren (Arbeit)». **Outlook auf dem Computer:** «Link kopieren», dann in Outlook «Kalender hinzufügen» › «Aus dem Internet» und einfügen. Outlook holt Änderungen alle paar Stunden; schneller lässt es sich nicht einstellen.
+- **Welche Termine?** Mit den Knöpfen darüber lässt sich der Kalender auf einzelne Arten beschränken, etwa nur Abfuhr und Geburtstage. Jede Auswahl ergibt einen eigenen Link.
+
+Das Abo geht in eine Richtung: vom Home-Planer in euren Kalender. Eintragen und ändern geht weiterhin im Home-Planer; Änderungen im iPhone- oder Outlook-Kalender kommen nicht zurück. Beides zusammen ginge nur mit Anmeldung bei Microsoft und Apple, und Apple bietet für den iPhone-Kalender keinen Zugang für Web-Apps an.
+
+**Ohne Kalender-Dienst** geht es mit Dateien: «Alle Termine als Datei» ergibt eine `.ics`-Datei, die Outlook und der Kalender des Computers mit einem Doppelklick übernehmen (spätere Änderungen kommen so nicht mit). Bei einem einzelnen Termin legt «In meinen Kalender» ihn in Outlook oder auf dem iPhone ab. In die andere Richtung holt «Kalenderdatei einlesen» Termine aus Outlook in den Home-Planer, etwa eine Einladung oder einen exportierten Kalender. Dieselbe Datei nochmals einzulesen aktualisiert die Termine, statt sie doppelt einzutragen.
+
+| Meldung im Fenster «Outlook & iPhone» | Was zu tun ist |
+|---|---|
+| «Der Kalender-Dienst antwortet nicht» | Adresse in `config.js` prüfen: genau so, wie Cloudflare sie zeigt, mit `https://` und ohne Schrägstrich am Schluss |
+| «… noch nicht fertig eingerichtet» | Schritt 4: das Secret `KALENDER_SCHLUESSEL` fehlt oder ist kürzer als 16 Zeichen |
+| «Firebase lehnt ab» | Sind die Regeln aus `firestore.rules` veröffentlicht? Ist der API-Schlüssel in der Google Cloud Console auf Websites beschränkt, darf er für den Dienst keine solche Beschränkung haben; sonst im Kalender-Dienst einen eigenen, unbeschränkten Schlüssel bei `FIREBASE_API_KEY` eintragen |
+| «… findet diesen Haushalt nicht» | Der Haushalt liegt nur auf dem Gerät («Einladen», «Für alle freigeben»), oder `kalender-worker.js` nennt ein anderes Firebase-Projekt als `config.js` |
 
 ## Die Bereiche im Detail
 
@@ -89,9 +118,13 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 
 Bild, Art und Merkmale (Vegi, Vegan, Schnell) errät die App aus Titel und Zutaten; alles lässt sich im Formular ändern. Erkennung ist nie perfekt: Ein kurzer Blick auf den Entwurf lohnt sich, vor allem bei Screenshots.
 
-**Kochmodus.** «Kochmodus starten» in einem Rezept öffnet eine ganze Bildschirmseite pro Schritt, gross lesbar, mit den Zutaten, die der Schritt braucht. Zuerst kommt «Zuerst bereitstellen» mit allen Zutaten für die gewählte Zahl Portionen. Weiter geht es mit «Weiter», mit einem Wisch zur Seite oder mit den Pfeiltasten. Steht in einem Schritt eine Zeit («12 Minuten kochen», «1½ Stunden schmoren», «eine halbe Stunde kühl stellen»), startet ein Tipp den Timer. Mehrere Timer laufen gleichzeitig, auch wenn ihr weiterblättert; ist die Zeit um, klingelt und vibriert das Handy, bis ihr «OK» tippt. Der Bildschirm bleibt an, solange der Kochmodus offen ist (wo der Browser das erlaubt). Der Lautsprecher oben liest jeden Schritt vor, «Aa» macht die Schrift grösser. Am Schluss merkt «Als gekocht merken» das Datum, damit «Was koche ich heute?» das Rezept eine Weile auslässt. Schliesst ihr den Kochmodus, während ein Timer läuft, fragt die App nach.
+**Rezeptbuch.** Unten im Reiter «Rezepte» stehen die Sammlungen «Glasiertes Poulet mit Reis» (14 Rezepte von Teriyaki über Gochujang und Karamell-Ingwer bis Granatapfel und Harissa-Honig) und «Im Stil von Ottolenghi» (15 eigene Rezepte im Geist seiner Küche: geröstetes Gemüse, Tahini, Joghurt, viele Kräuter, Granatapfel, Sumach, Za'atar). Darunter die Weltgegenden: Asien (Thai, Chinesisch, Japanisch, Koreanisch, Indisch, Vietnamesisch, Indonesien und Malaysia), Europa (Schweiz, Italien, Frankreich, Spanien, Griechenland, Deutschland und Österreich, Osteuropa, Skandinavien und Grossbritannien), Nahost und Nordafrika, Amerika. Im Buch lässt sich nach Küche, Vegi, Vegan, Schnell, Günstig, Gang und Zutaten filtern; unter jedem Rezept steht «In dieselbe Richtung» mit ähnlichen Gerichten. Ein Rezept aus dem Buch wird mit «Übernehmen» oder der ersten Notiz zu eurem eigenen; dann lässt es sich anpassen. Originalrezepte von Ottolenghi und anderen holt ihr mit «Aus Link» von deren Websites. Die Rezepte des Buchs stehen in `ideen.js` und `buch-*.js`.
 
-**Kalender.** Ein Tipp auf einen Tag zeigt seine Termine; «Demnächst» listet die nächsten 30 Tage, jeden Termin einmal. Bei der Art «Abfuhr» ist «Jede Woche» schon gewählt, bei «Geburtstag» «Jedes Jahr». Fällt eine Abfuhr wegen eines Feiertags aus, öffnet man sie an diesem Tag und wählt «Nur am … ausfallen lassen». Monatliche Termine am 29. bis 31. fallen in kürzeren Monaten aus, wie in den gängigen Kalendern.
+**Notizen und Bewertung.** Unter jedem Rezept «Wie war's? Notiz schreiben»: 😋 Sehr gut, 🙂 Ganz okay oder 😕 Nicht nochmals, dazu ein paar Worte. Mit «Das mache ich nächstes Mal anders» steht die Notiz oben im Rezept und beim nächsten Kochen auf der ersten Seite des Kochmodus («Vom letzten Mal»). Der Kochmodus fragt am Schluss selbst nach. Die Liste zeigt die letzte Bewertung neben dem Titel, und was zuletzt «Nicht nochmals» bekam, schlägt der Würfel nicht mehr vor. Mehrere Personen können gleichzeitig Notizen schreiben, ohne sich zu überschreiben.
+
+**Kochmodus.** «Kochmodus starten» in einem Rezept öffnet eine ganze Bildschirmseite pro Schritt, gross lesbar, mit den Zutaten, die der Schritt braucht. Zuerst kommt «Zuerst bereitstellen» mit allen Zutaten für die gewählte Zahl Portionen. Weiter geht es mit «Weiter», mit einem Wisch zur Seite oder mit den Pfeiltasten. Steht in einem Schritt eine Zeit («12 Minuten kochen», «1½ Stunden schmoren», «eine halbe Stunde kühl stellen»), startet ein Tipp den Timer. Mehrere Timer laufen gleichzeitig, auch wenn ihr weiterblättert; ist die Zeit um, klingelt und vibriert das Handy, bis ihr «OK» tippt. Der Bildschirm bleibt an, solange der Kochmodus offen ist (wo der Browser das erlaubt). Der Lautsprecher oben liest jeden Schritt vor, «Aa» macht die Schrift grösser. Am Schluss fragt er «Wie war's?» und merkt mit «Als gekocht merken» das Datum, damit «Was koche ich heute?» das Rezept eine Weile auslässt. Schliesst ihr den Kochmodus, während ein Timer läuft, fragt die App nach.
+
+**Kalender.** Ein Tipp auf einen Tag zeigt seine Termine; «Demnächst» listet die nächsten 30 Tage, jeden Termin einmal. Bei der Art «Abfuhr» ist «Jede Woche» schon gewählt, bei «Geburtstag» «Jedes Jahr». Fällt eine Abfuhr wegen eines Feiertags aus, öffnet man sie an diesem Tag und wählt «Nur am … ausfallen lassen». Monatliche Termine am 29. bis 31. fallen in kürzeren Monaten aus, wie in den gängigen Kalendern. Wie die Termine in Outlook und auf das iPhone kommen, steht in [Abschnitt 4](#4-kalender-in-outlook-und-auf-dem-iphone).
 
 **Pflanzen.** Rhythmus in Tagen (Knöpfe für die üblichen Abstände), Raum, optional Dünger und wer zuständig ist. Die Liste zeigt die durstigsten zuerst: rot ist überfällig, orange heute fällig. Die Zahl auf dem Reiter «Pflanzen» sagt, wie viele heute Wasser brauchen. Ein Tipp auf die Pflanze zeigt den Verlauf: wer wann gegossen oder gedüngt hat.
 
@@ -106,6 +139,7 @@ Bild, Art und Merkmale (Vegi, Vegan, Schnell) errät die App aus Titel und Zutat
 - **Die Werte in `config.js` sind keine Passwörter.** Sie sagen dem Browser nur, welches Firebase-Projekt gemeint ist, und sind bei jeder Firebase-Web-App öffentlich. Geschützt werden die Daten durch die Regeln.
 - Links in Infos öffnet die App nur, wenn sie mit `https://` oder `http://` beginnen.
 - **Rezept aus einem Link:** Die Adresse des Rezepts geht an einen öffentlichen Lesedienst (der Reihe nach `api.allorigins.win`, `api.codetabs.com`, `r.jina.ai`), der die Seite holt und dem Browser zurückgibt. Mehr nicht: keine Haushaltsdaten, keine Kennung. Wer das nicht möchte, nimmt Screenshot oder Text.
+- **Kalender-Abo:** Der Link enthält nicht die Kennung des Haushalts, sondern eine mit `KALENDER_SCHLUESSEL` verschlüsselte Fassung. Wer ihn hat, sieht die Termine (Titel, Zeit, Notiz, wer betroffen ist), aber nicht Kasse, Infos oder den Rest des Haushalts. Der Link landet bei Apple, Microsoft oder Google, je nachdem, wo ihr ihn abonniert. «Link erneuern» macht alle bisherigen Links ungültig. Der Kalender-Dienst bei Cloudflare liest die Termine bei jedem Abruf aus Firestore und speichert nichts.
 - **Rezept aus Screenshots:** Die Texterkennung läuft auf dem Gerät. Die Bilder verlassen es nicht und werden nicht gespeichert; gespeichert wird nur das Rezept, das ihr daraus macht.
 - Wo die Daten liegen: im Speicher des Browsers auf jedem Gerät und, mit Gruppen-Sync, in der Firestore-Datenbank am gewählten Standort. Programm, Schriften und Bibliotheken kommen aus diesem Repository, nicht von fremden Servern.
 - Ferienkasse und Home-Planer liegen unter derselben Adresse (`marcesss97.github.io`) und teilen sich im Browser einen Speicher. Sie kommen sich nicht in die Quere: Der Home-Planer schreibt nur Einträge, die mit `hp.` beginnen, und hat einen eigenen Zwischenspeicher für den Sync.
@@ -128,20 +162,23 @@ Bild, Art und Merkmale (Vegi, Vegan, Schnell) errät die App aus Titel und Zutat
 - Eine Datei ändern: auf GitHub öffnen, Stift, ändern, «Commit changes». Nach etwa einer Minute ist die neue Fassung veröffentlicht; die App holt sie beim nächsten Start mit Netz.
 - Name und Farben: `manifest.webmanifest`, `index.html` und der Anfang von `style.css` (Farben als Variablen, hell und dunkel).
 - Kategorien der Kasse, Abteilungen und Stichwörter der Einkaufsliste, Arten von Terminen, Pflanzenbilder, Vorlagen der Infos, Bilder und Merkmale der Rezepte und Avatare: in `logic.js`.
-- Die eingebauten Kochideen: in `ideen.js`. Eine eigene Idee ist ein weiterer Eintrag nach demselben Muster.
+- Das Rezeptbuch: `ideen.js` und `buch-asien.js`, `buch-europa.js`, `buch-levante.js`. Ein eigenes Rezept ist ein weiterer Eintrag nach demselben Muster; `node tests/buch.test.js` prüft danach, ob alles stimmt (vegi und vegan, Timer, Abteilungen). Küchen und Sammlungen: `KITCHENS` und `COLLECTIONS` in `logic.js`.
+- Der Kalender-Dienst: Wer `ics.js` ändert, überträgt die Änderung mit `node tests/kalender.test.js --update` in `kalender-worker.js` und fügt die Datei danach bei Cloudflare nochmals ein (Schritt 3 in Abschnitt 4).
 - Die typische Reihenfolge der Abteilungen bei Migros und Coop und die Adressen der Onlineshops: `STORES` in `logic.js`.
 - Die Lesedienste für Rezept-Links: `READERS` in `import.js`.
 
 | Datei | Aufgabe |
 |---|---|
 | `index.html`, `style.css` | Seite und Aussehen |
-| `config.js` | Einstellungen dieser Installation (Gruppen-Sync) |
+| `config.js` | Einstellungen dieser Installation (Gruppen-Sync, Kalender-Dienst) |
 | `app.js` | Hülle: Liste der Haushalte, Übersicht, Navigation, Einladen, Einstellungen |
 | `ui.js` | Gemeinsame Bausteine der Oberfläche |
 | `kasse.js`, `einkauf.js`, `rezepte.js`, `kalender.js`, `pflanzen.js`, `infos.js` | Die sechs Bereiche |
 | `kochen.js` | Der Kochmodus |
 | `import.js` | Rezepte aus Links, Screenshots und Text erkennen |
-| `ideen.js` | Die eingebauten Kochideen |
+| `ideen.js`, `buch-asien.js`, `buch-europa.js`, `buch-levante.js` | Das Rezeptbuch |
+| `ics.js` | Kalenderdateien schreiben und lesen (für Outlook, iPhone, Google) |
+| `kalender-worker.js` | Der Kalender-Dienst für Cloudflare (läuft nicht in der App, siehe Abschnitt 4) |
 | `logic.js` | Rechnen und Prüfen: Aufteilen, Ausgleich, Statistik, Wiederholungen, Giessplan, Portionen umrechnen, Lesen gespeicherter Daten |
 | `store.js` | Speichern auf dem Gerät und im Gruppen-Sync |
 | `rates.js` | Tageskurse |
@@ -156,6 +193,8 @@ Bild, Art und Merkmale (Vegi, Vegan, Schnell) errät die App aus Titel und Zutat
 ```sh
 node tests/logic.test.js          # Rechenlogik, ohne Browser
 node tests/import.test.js         # Rezepte erkennen, Timer finden, Reihenfolge der Läden, ohne Browser
+node tests/kalender.test.js       # Kalenderdateien und Kalender-Dienst, ohne Browser
+node tests/buch.test.js           # das Rezeptbuch: vollständig, vegi/vegan stimmig, Timer, Abteilungen
 npm install playwright            # einmalig, für den Browser-Test
 node tests/e2e.test.js            # die ganze App in Chromium, mit nachgebautem Sync-Server und zwei Handys
 ```
@@ -166,11 +205,14 @@ Geprüft, automatisch und wiederholbar:
 
 - Die Rechenlogik mit Tausenden Zufallsfällen: Aufteilen auf den Rappen genau, Salden und Abrechnung (alle sind danach quitt, höchstens so viele Zahlungen wie nötig), Lesen von Beträgen, Statistik pro Monat, Wiederholungen im Kalender gegen eine Nachzählung Tag für Tag, Giessplan, Abteilungen und Mengen der Einkaufsliste, Portionen umrechnen, Suche nach Zutaten, Vollständigkeit aller Kochideen, und der Umgang mit unsinnigen oder manipulierten Daten (etwa Links mit `javascript:`).
 - Das Erkennen von Rezepten an nachgebauten Seiten nach dem Muster von Fooby, Migusto, Chefkoch und Instagram (`tests/fixtures/`), an Screenshot-Text mit typischen Lesefehlern und an Beschreibungen ohne Überschriften; das Durchprobieren der Lesedienste, wenn einer ausfällt; Zeitangaben in Schritten («5 bis 8 Minuten», «1½ Stunden», «Viertelstunde»); die Reihenfolge der Abteilungen.
-- Die ganze App in Chromium in 25 Schritten: Haushalt anlegen, jeder Bereich mit seinen Formularen (bei den Rezepten: würfeln, Portionen, Einkaufsliste, übernehmen, einplanen, Kühlschrank-Suche; Rezept aus einem Link, aus Text und aus einem echten Bild mit der Texterkennung; Kochmodus mit Timer, Klingeln und Stoppen; Teilen an die App über den Service Worker; Einkaufsliste für Migros und Coop mit eigener Reihenfolge), Neuladen, Zurück-Taste, Personen und Avatare, Sicherung herunterladen und einlesen, Löschen, schmale Handys mit 320 Pixeln. Der Gruppen-Sync mit einem nachgebauten Firestore-Server und zwei getrennten Handys: beitreten, Einträge (auch Rezepte) erscheinen gegenseitig, gleichzeitige Änderungen, für alle löschen, fehlende Regeln, fehlende Datenbank, einen Haushalt vom Gerät freigeben. Dazu ein Start mit der echten Firebase-Bibliothek ohne Netz.
+- Kalenderdateien: 300 Zufallstermine (Wiederholungen, gestrichene Tage, Monatsende, 29. Februar, Sommerzeit) als Kalender geschrieben und von einer unabhängigen Bibliothek (Python `icalendar` mit `recurring_ical_events`) wieder aufgelöst: Alle 5831 Termine stimmen mit dem Kalender der App überein. Dazu das Lesen einer Outlook-Datei mit Zeitzonen, Erinnerungen und Serien, und der Kalender-Dienst mit nachgebautem Firestore: Schlüssel, mehrere Seiten Termine, Auswahl der Arten, erneuerter Link, fremde und kaputte Schlüssel. Die Abfragen des Dienstes wurden gegen den echten Firestore-Server ausprobiert (lesend).
+- Das Rezeptbuch: alle 157 Rezepte vollständig, eindeutig, mit Küche; als vegi oder vegan markierte Rezepte ohne Fleisch, Fisch, Fischsauce oder tierische Zutaten; Rezepte ab 25 Minuten mit Zeitangaben für die Timer; jede Zutat mit einer Abteilung auf der Einkaufsliste.
+- Die ganze App in Chromium in 29 Schritten: Haushalt anlegen, jeder Bereich mit seinen Formularen (bei den Rezepten: würfeln, Portionen, Einkaufsliste, übernehmen, einplanen, Kühlschrank-Suche; Rezept aus einem Link, aus Text und aus einem echten Bild mit der Texterkennung; Kochmodus mit Timer, Klingeln und Stoppen; Teilen an die App über den Service Worker; Einkaufsliste für Migros und Coop mit eigener Reihenfolge; Rezeptbuch mit Sammlung, Suche, zurück ins Buch, Notizen, Tipp und Bewertung im Kochmodus, «Nicht nochmals» fällt aus dem Würfel; Kalender als Datei, einzelner Termin, Outlook-Datei einlesen und nochmals einlesen), Neuladen, Zurück-Taste, Personen und Avatare, Sicherung herunterladen und einlesen, Löschen, schmale Handys mit 320 Pixeln. Der Gruppen-Sync mit einem nachgebauten Firestore-Server und zwei getrennten Handys: beitreten, Einträge (auch Rezepte) erscheinen gegenseitig, gleichzeitige Änderungen, für alle löschen, fehlende Regeln, fehlende Datenbank, einen Haushalt vom Gerät freigeben, Kalender-Abo mit Links für iPhone und Outlook und «Link erneuern», Notizen von zwei Handys gleichzeitig zum selben Rezept. Dazu ein Start mit der echten Firebase-Bibliothek ohne Netz.
 
 Nicht geprüft, weil es von hier aus nicht möglich war:
 
-- der Betrieb mit dem echten Firebase-Projekt und den Regeln aus `firestore.rules`,
+- der Betrieb mit dem echten Firebase-Projekt und den Regeln aus `firestore.rules` (geprüft ist nur lesend, dass die Regeln veröffentlicht sind),
+- das echte Abo in Outlook und im iPhone-Kalender und der Kalender-Dienst bei Cloudflare selbst (geprüft sind die Kalenderdateien und der Dienst mit nachgebautem Firestore),
 - echte iPhones und Android-Handys (Installieren, Teilen-Menü, Aussehen der Emojis, Bildschirm-bleibt-an, Vorlesen, Vibrieren),
 - echte Rezeptseiten und die öffentlichen Lesedienste: Sie waren von hier aus nicht erreichbar, geprüft ist mit nachgebauten Seiten. Ändert eine Seite ihren Aufbau oder fällt ein Lesedienst weg, hilft der Weg über Screenshot oder Text,
 - die Texterkennung an echten Handy-Screenshots (geprüft mit einem in Chromium gezeichneten Rezeptbild),
@@ -180,4 +222,4 @@ Dafür ist der [Probelauf](#3-probelauf) da.
 
 ## Lizenzen
 
-Die mitgelieferten Bibliotheken und Schriften stehen unter freien Lizenzen: Firebase JavaScript SDK und htm (Apache 2.0), Preact und qrcode-generator (MIT), Tesseract.js mit Tesseract OCR und dem deutschen Sprachmodell (Apache 2.0; darin Leptonica, libjpeg der Independent JPEG Group, libpng, zlib, libtiff und libwebp unter ihren freien Lizenzen), die Schriften Fredoka, Anton und IBM Plex Mono (SIL Open Font License 1.1). Die Emojis zeichnet jedes Gerät mit seiner eigenen Emoji-Schrift. Die vollständigen Angaben und Texte stehen in [`LICENSES.txt`](LICENSES.txt).
+Die mitgelieferten Bibliotheken und Schriften stehen unter freien Lizenzen: Firebase JavaScript SDK und htm (Apache 2.0), Preact und qrcode-generator (MIT), Tesseract.js mit Tesseract OCR und dem deutschen Sprachmodell (Apache 2.0; darin Leptonica, libjpeg der Independent JPEG Group, libpng, zlib, libtiff und libwebp unter ihren freien Lizenzen), die Schriften Fredoka, Anton und IBM Plex Mono (SIL Open Font License 1.1). Die Emojis zeichnet jedes Gerät mit seiner eigenen Emoji-Schrift. Die Rezepte des Rezeptbuchs sind eigene Fassungen; die Sammlung «Im Stil von Ottolenghi» enthält eigene Rezepte im Geist seiner Küche, keine aus seinen Büchern. Die vollständigen Angaben und Texte stehen in [`LICENSES.txt`](LICENSES.txt).

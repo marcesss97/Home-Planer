@@ -379,6 +379,7 @@ button.x:hover { background: var(--inset); }
 .sheet-head > :last-child { justify-self: end; }
 .sheet-err { padding: 10px 16px; border-bottom: 2px solid var(--line); background: var(--neg-soft); color: var(--ink); font-size: 14.5px; }
 .sheet-body { flex: 1; display: flex; flex-direction: column; gap: 22px; padding: 18px 16px calc(28px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; overscroll-behavior: contain; }
+.sheet-body > * { flex-shrink: 0; }                         /* lange Listen schrumpfen nicht unter den Text darunter */
 @media (min-width: 640px) {
   .scrim { align-items: center; padding: 24px; }
   .sheet { height: auto; max-height: 100%; border-radius: 24px; box-shadow: var(--float); overflow: hidden; }
@@ -714,3 +715,40 @@ details.raw .code { margin-top: 10px; max-height: 260px; overflow: auto; }
 .rows .row .icon-btn[aria-label$="nach oben"] .ic { transform: rotate(90deg); }
 .rows .row .icon-btn[aria-label$="nach unten"] .ic { transform: rotate(90deg); }
 .icon-btn:disabled { opacity: .3; }
+
+/* Kalender mit Outlook und iPhone */
+.sub-h { margin: 10px 0 -12px; font-family: var(--display); font-size: 17px; font-weight: 600; }
+.sub-links { display: grid; gap: 8px; }
+.sub-links .btn { justify-content: flex-start; text-align: left; }
+.x.static { cursor: default; }
+
+/* Notizen zu Rezepten */
+.rnotes { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.rnote { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 12px; border: 2px solid var(--line); border-radius: 16px; background: var(--surface); }
+.rnote.tip { border-color: var(--sun); background: var(--sun-soft); }
+.rnote > .emo { font-size: 22px; }
+.rnote-b { display: grid; gap: 4px; min-width: 0; }
+.rnote-h { display: flex; flex-wrap: wrap; gap: 6px; }
+.rnote-h:empty { display: none; }
+.mood { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 12px; background: var(--inset); font-size: 13px; font-weight: 600; }
+.mood.tipb { background: var(--sun); color: var(--on-sun); }
+.rnote-t { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; }
+.note-form { display: grid; gap: 12px; padding: 14px; border-radius: 16px; background: var(--inset); }
+.note.tipnote { background: var(--sun-soft); }
+.note.tipnote > .emo { font-size: 22px; }
+.tips { display: grid; gap: 6px; margin: 0; padding-left: 18px; line-height: 1.45; }
+.moodb { font-size: 14px; white-space: nowrap; }
+.cook-rate { display: grid; gap: 10px; width: 100%; text-align: left; }
+
+/* Rezeptbuch */
+.book-colls { display: grid; gap: 10px; }
+.book-coll { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 2px solid var(--line); border-radius: 18px;
+  background: linear-gradient(120deg, var(--sun-soft), var(--surface) 70%); box-shadow: 0 3px 0 var(--line); color: var(--ink); text-align: left; }
+.book-coll:active { transform: translateY(3px); box-shadow: none; }
+.book-e { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--surface); font: 400 28px/1 var(--emoji); box-shadow: 0 2px 0 var(--line); }
+.qa-n { color: var(--ink-3); font-size: 12px; font-weight: 500; }
+.select.mini { width: auto; min-height: 32px; padding: 0 30px 0 10px; border-radius: 16px; font-size: 13px; }
+.chips.scroll { flex-wrap: nowrap; margin: 0 -16px; padding: 2px 16px 5px; overflow-x: auto; scrollbar-width: none; }
+.chips.scroll::-webkit-scrollbar { display: none; }
+.chips.scroll > * { flex: none; }
+.sheet-body > .chips.scroll + .chips.scroll { margin-top: -14px; }
