@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// Home-Planer: Sicherheitsregeln der Datenbank (Cloud Firestore).
+// Jeder Haushalt hat eine lange Zufallskennung. Sie steckt im Einladungslink.
+// Wer die Kennung kennt, darf den Haushalt lesen und bearbeiten.
+// Niemand kann Haushalte auflisten oder durchsuchen.
+//
+// Der Bereich "trips" gehört zur Ferienkasse. Er steht hier, damit beide Apps dasselbe Firebase-Projekt nutzen können:
+// Wer nur den Home-Planer betreibt, kann ihn stehen lassen oder löschen.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /homes/{homeId} {
+      allow get, create, update, delete: if homeId.size() >= 16;
+      allow list: if false;
+
+      match /{part}/{docId} {
+        allow read, write: if homeId.size() >= 16
+          && part in ['expenses', 'shopping', 'events', 'plants', 'infos'];
+      }
+    }
+
+    match /trips/{tripId} {
+      allow get, create, update, delete: if tripId.size() >= 16;
+      allow list: if false;
+
+      match /expenses/{expenseId} {
+        allow read, write: if tripId.size() >= 16;
+      }
+    }
+  }
+}

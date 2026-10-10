@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Nur Skripte aus diesem Projekt dürfen laufen. Daten, Kurse und die Verbindungsprobe des Gruppen-Syncs gehen über https ins Netz. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
+<title>Home-Planer</title>
+<meta name="description" content="Euer Haushalt an einem Ort: gemeinsame Kasse, Einkaufsliste, Kalender, Giessplan für die Pflanzen und wichtige Infos.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FFF3DC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1A17" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Home-Planer">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="fredoka-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div class="wrap">
+    <header class="brand"><h1><span class="logo" aria-hidden="true">🏡</span><span class="word">Home-Planer</span></h1><p>Kasse, Einkauf, Kalender, Pflanzen und Infos für euren Haushalt.</p></header>
+    <p class="status" id="boot-status" role="status">Home-Planer wird geladen …</p>
+    <noscript><p class="status">Der Home-Planer braucht JavaScript. Schalte es im Browser ein und lade die Seite neu.</p></noscript>
+  </div>
+</div>
+<script src="config.js"></script>
+<script src="vendor-preact.js"></script>
+<script src="vendor-qrcode.js"></script>
+<script src="logic.js"></script>
+<script src="store.js"></script>
+<script src="rates.js"></script>
+<script src="ui.js"></script>
+<script src="kasse.js"></script>
+<script src="einkauf.js"></script>
+<script src="kalender.js"></script>
+<script src="pflanzen.js"></script>
+<script src="infos.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
