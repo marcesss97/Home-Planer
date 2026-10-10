@@ -794,3 +794,18 @@ details.raw .code { margin-top: 10px; max-height: 260px; overflow: auto; }
 .finder-out { display: grid; gap: 12px; padding-top: 6px; border-top: 2px solid var(--line); }
 .fcard { display: grid; gap: 8px; }
 .finder-card { background: linear-gradient(120deg, var(--accent-soft), var(--surface) 70%); }
+
+/* Kühlschrank */
+.finder-cards { display: grid; gap: 10px; }
+.fridge-card { background: linear-gradient(120deg, #e3f2fb, var(--surface) 70%); }
+:root[data-theme="dark"] .fridge-card { background: linear-gradient(120deg, #17384a, var(--surface) 70%); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fridge-card { background: linear-gradient(120deg, #17384a, var(--surface) 70%); } }
+.fquick summary { font-weight: 600; cursor: pointer; }
+.fquick[open] summary { margin-bottom: 10px; }
+.fridge-out { display: grid; gap: 18px; padding-top: 6px; border-top: 2px solid var(--line); }
+.frows { display: grid; gap: 10px; }
+.frow { display: grid; border: 2px solid var(--line); border-radius: 18px; background: var(--surface); overflow: hidden; }
+.frow > .x { border-bottom: 0; }
+.fr-have { color: var(--pos, var(--accent-hi)); font-weight: 600; }
+.fr-buy { justify-self: start; margin: -4px 12px 10px 64px; }
+.btn-row.tight { gap: 4px; flex-wrap: nowrap; }

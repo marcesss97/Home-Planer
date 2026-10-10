@@ -779,7 +779,7 @@
       </section>
       ${idea && html`
         <section class="panel">
-          <div class="panel-head"><h2 class="sec-h">Kochidee für heute</h2><button type="button" class="btn ghost small" onClick=${() => open({ t: "finder" })}><span class="emo" aria-hidden="true">🔮</span>Menü-Finder</button></div>
+          <div class="panel-head"><h2 class="sec-h">Kochidee für heute</h2><span class="btn-row tight"><button type="button" class="btn ghost small" aria-label="Kühlschrank: Ich habe noch …" onClick=${() => open({ t: "fridge" })}><span class="emo" aria-hidden="true">🧊</span></button><button type="button" class="btn ghost small" onClick=${() => open({ t: "finder" })}><span class="emo" aria-hidden="true">🔮</span>Menü-Finder</button></span></div>
           <div class="list flat">
             <div class="x row-act">
               <button type="button" class="x-in" onClick=${() => open({ t: "recipe", id: idea.id })}>
@@ -1224,6 +1224,7 @@
             onClose=${() => (s.back ? setSheet(Object.assign({}, s.back, { k: newId() })) : close())} />`;
         }
         else if (s.t === "book") sheetEl = html`<${U.BookSheet} key=${s.k} ctx=${ctx} f=${s.f} open=${s.open} onClose=${close} />`;
+        else if (s.t === "fridge") sheetEl = html`<${U.FridgeSheet} key=${s.k} ctx=${ctx} o=${s.o} onClose=${close} />`;
         else if (s.t === "finder") sheetEl = html`<${U.FinderSheet} key=${s.k} ctx=${ctx} p=${s.p} i=${s.i} onClose=${close} />`;
         /* Editing a recipe that was open leads back to it; a new one opens once it is saved. */
         else if (s.t === "recipe-edit") sheetEl = html`<${U.RecipeForm} key=${s.k} ctx=${ctx} r=${s.r ? findIn("recipes", s.r.id, s.r) : null} draft=${s.draft} source=${s.source} how=${s.how}

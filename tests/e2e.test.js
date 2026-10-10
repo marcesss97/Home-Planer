@@ -716,6 +716,34 @@ step("Menü-Finder: Zeit, Lust, Hauptzutat, Vorschlag mit Begründung, noch eine
   await A.click(".sheet-head >> text=Fertig"); await noSheet(A);
   await A.click('[aria-label="Haushalt bearbeiten"]'); await A.uncheck("#hp-set-gf"); await A.click(".sheet-head >> text=Fertig"); await noSheet(A);
 });
+step("Kühlschrank: was noch da ist, sofort kochbar oder fehlt wenig, Fehlendes auf die Liste, Aufgebrauchtes streichen", async () => {
+  await tab(A, "recipes");
+  await A.click(".fridge-card");
+  await A.fill("#hp-fr-add", "eier, Tomaten"); await A.keyboard.press("Enter");
+  await A.click('.fquick .chip:has-text("Peperoni")');
+  const inFridge = () => A.locator('.fgroup:has(.label:has-text("Im Kühlschrank")) .chip').allInnerTexts();
+  await A.waitForFunction(() => document.querySelectorAll('.chip[aria-label$=" entfernen"]').length === 3);
+  assert.deepStrictEqual((await inFridge()).map(t => t.replace(/✕/g, "").trim()), ["Eier", "Tomaten", "Peperoni"]);
+  await A.locator('.fridge-out .stack:has(.aisle:has-text("Sofort kochbar")) .frow', { hasText: "Shakshuka" }).waitFor();
+  const few = A.locator('.fridge-out .stack:has(.aisle:has-text("Fehlt nur wenig")) .frow').first();
+  assert.match(await few.innerText(), /fehlt:/);
+  await few.locator(".fr-buy").click();
+  await toast(A, /Einkaufsliste/);
+  await A.click('.fridge-out .frow .x:has-text("Shakshuka")');
+  await A.click("text=Kochmodus starten");
+  for (let i = 0; i < 12 && await A.locator(".cook-nav .btn.primary").count(); i++) await A.click(".cook-nav .btn.primary");
+  for (const x of ["Eier", "Tomaten", "Peperoni"]) await A.locator(`.cook-rate .chip[aria-pressed="true"]:has-text("${x}")`).waitFor();
+  await A.click('.cook-rate .chip:has-text("Tomaten")');
+  await A.click(".cook-done .btn.primary");
+  await toast(A, /En Guete/);
+  await A.click(".sheet-head >> text=Fertig");
+  await A.locator(".fridge-card", { hasText: "Tomaten" }).waitFor();
+  await A.click(".fridge-card");
+  await A.waitForFunction(() => document.querySelectorAll('.chip[aria-label$=" entfernen"]').length === 1);
+  await A.click("text=Alles leeren"); await A.click("text=Nochmal tippen");
+  await A.locator(".fridge-out .calm").waitFor();
+  await A.click(".sheet-head >> text=Fertig"); await noSheet(A);
+});
 step("Monatsabrechnung: Einkäufe des Monats, Anteile, quitt für diesen Monat, Tabelle", async () => {
   await tab(A, "kasse");
   await A.click(".month-card");

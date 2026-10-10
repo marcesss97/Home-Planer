@@ -308,6 +308,30 @@ test("menu finder: hard limits, history, ratings, and a whole menu", () => {
   assert.strictEqual(m.starter.title, "Linsensuppe"); assert.strictEqual(m.dessert.title, "Mangocreme");
 });
 
+/* ---------- the fridge ---------- */
+test("fridge: stems, umbrella words, short words, basics and herbs", () => {
+  const t = (item, line) => HP.fridgeItem(item).test(line);
+  assert.ok(t("Poulet", "600 g Pouletschenkel") && t("Zucchetti", "2 Zucchetti, in Scheiben") && t("Käse", "200 g Gruyère, gerieben") && t("Pasta", "400 g Penne rigate"));
+  assert.ok(t("Ei", "2 Eier") && t("Eier", "1 Ei") && !t("Ei", "300 g Reis") && !t("Ei", "Reisessig"), "short words only as whole words");
+  assert.ok(t("Tomaten", "4 Tomaten") && t("Tomate", "1 Dose gehackte Tomaten") && !t("Reis", "2 EL Reisessig"));
+  const r = R("Pasta mit Spinat", ["400 g Spaghetti", "200 g Blattspinat", "2 dl Rahm", "1 Zwiebel", "2 Knoblauchzehen", "Salz, Pfeffer", "½ Bund Petersilie", "50 g Parmesan"]);
+  const m = HP.fridgeMatch(r, ["Pasta", "Spinat", "Rahm"].map(HP.fridgeItem), true);
+  eq(m.used, ["Pasta", "Spinat", "Rahm"]); eq(m.missing, ["50 g Parmesan"]); eq(m.soft, ["½ Bund Petersilie"]);
+  eq(HP.fridgeMatch(r, ["Pasta"].map(HP.fridgeItem), false).missing, ["200 g Blattspinat", "2 dl Rahm", "1 Zwiebel", "2 Knoblauchzehen", "50 g Parmesan"], "without basics, onion and garlic are missing too");
+});
+test("fridge: what can be cooked at once comes first, then what needs one or two things", () => {
+  const a = R("Rührei", ["4 Eier", "1 dl Milch", "Salz, Pfeffer", "Schnittlauch"], null, { time: 10 });
+  const b = R("Shakshuka", ["4 Eier", "1 Dose gehackte Tomaten", "1 Peperoni", "1 Zwiebel"], null, { time: 25 });
+  const c = R("Lasagne", ["250 g Lasagneblätter", "500 g Hackfleisch", "1 Dose gehackte Tomaten", "5 dl Milch", "100 g Parmesan", "50 g Butter"], null, { time: 90 });
+  const d = R("Linsen", ["300 g Linsen", "1 Rüebli"], null, { tags: ["vegan"] });
+  const res = HP.fridgeSuggest([c, b, a, d], ["Eier", "Milch", "Tomaten"], {});
+  eq(res.map(x => [x.r.title, x.group]), [["Rührei", 0], ["Shakshuka", 1], ["Lasagne", 2]]);
+  eq(HP.fridgeSuggest([a, b, c, d], ["Eier", "Milch", "Tomaten"], { time: 30 }).map(x => x.r.title), ["Rührei", "Shakshuka"]);
+  eq(HP.fridgeSuggest([a, b, c, d], [], {}), []);
+  const home = HP.normHome("h".repeat(22), { name: "x", base: "CHF", fridge: ["Feta", "feta", " Rahm ", 7, ""] });
+  eq(home.fridge, ["Feta", "Rahm"]);
+});
+
 /* ---------- monthly statement ---------- */
 test("monthly statement: purchases of one month, shares, payments that settle only this month", () => {
   const home = HP.normHome("h".repeat(22), { name: "WG", base: "CHF", members: { a: { name: "Anna", o: 0 }, b: { name: "Ben", o: 1 } } });

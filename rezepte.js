@@ -183,18 +183,25 @@
         </div>
         <p>Link von Fooby, Migusto, Betty Bossi, Swissmilk oder Chefkoch einfügen, einen Screenshot wählen oder Text einfügen: Daraus entstehen Rezept, Einkaufsliste und Kochmodus.</p>
       </section>
-      <button type="button" class="book-coll finder-card" onClick=${() => ctx.open({ t: "finder" })}>
-        <span class="book-e" aria-hidden="true">🔮</span>
-        <span class="x-main"><span class="x-t">Menü-Finder</span><span class="x-s">Zeit, Lust, Zutaten: Was passt heute?</span></span>
-        <${Icon} n="next" s=${18} />
-      </button>
+      <div class="finder-cards">
+        <button type="button" class="book-coll finder-card" onClick=${() => ctx.open({ t: "finder" })}>
+          <span class="book-e" aria-hidden="true">🔮</span>
+          <span class="x-main"><span class="x-t">Menü-Finder</span><span class="x-s">Zeit, Lust, Stimmung: Was passt heute?</span></span>
+          <${Icon} n="next" s=${18} />
+        </button>
+        <button type="button" class="book-coll fridge-card" onClick=${() => ctx.open({ t: "fridge" })}>
+          <span class="book-e" aria-hidden="true">🧊</span>
+          <span class="x-main"><span class="x-t">Ich habe noch …</span><span class="x-s">${(ctx.home.fridge || []).length ? (ctx.home.fridge || []).slice(0, 4).join(", ") + ((ctx.home.fridge || []).length > 4 ? " …" : "") : "Rezepte aus dem, was im Kühlschrank ist"}</span></span>
+          <${Icon} n="next" s=${18} />
+        </button>
+      </div>
       <${IdeaCard} ctx=${ctx} />
       <${WeekPlan} ctx=${ctx} />
       <div class="find-row">
         <div class="search">
           <${Icon} n="search" s=${18} />
           <label class="sr" for="hp-rc-q">Rezepte durchsuchen</label>
-          <input id="hp-rc-q" class="input" type="search" autocomplete="off" placeholder="Was ist da? z. B. Zucchetti, Feta" value=${q} onInput=${e => setQ(e.target.value)} />
+          <input id="hp-rc-q" class="input" type="search" autocomplete="off" placeholder="Rezept oder Zutat suchen" value=${q} onInput=${e => setQ(e.target.value)} />
         </div>
         <button type="button" class="btn" onClick=${() => ctx.open({ t: "book", f: startFilter(ctx, { q }), open: true })}><${Icon} n="sliders" s=${18} />Filter</button>
       </div>
@@ -349,6 +356,106 @@
               sub=${(x.hits.length > 1 ? "passt: " + x.hits.join(", ") + " · " : "") + metaOf(x.r) + (x.r.kitchen ? " · " + HP.kitchen(x.r.kitchen).label : "") + gf} />`;
           })}</div>
           ${found.length > shown && html`<div><button type="button" class="btn block" onClick=${() => setShown(shown + PAGE)}><${Icon} n="down" s=${18} />Weitere ${Math.min(PAGE, found.length - shown)} von ${found.length - shown}</button></div>`}`}
+      <//>`;
+  }
+
+  /* ---------- the fridge: recipes from what is still there ---------- */
+  const FRIDGE_CATS = HP.RECIPE_CATS.filter(c => c.id !== "other");
+  const FRIDGE_DIET = HP.DIETS.filter(d => ["vegi", "vegan", "gf"].indexOf(d.id) >= 0);
+  function FridgeRow({ ctx, x, back }) {
+    const [busy, run] = useBusy();
+    const name = l => HP.splitQty(l).name.split(",")[0].replace(/\(.*?\)/g, "").trim();
+    return html`
+      <div class="frow">
+        <button type="button" class="x" onClick=${() => ctx.open({ t: "recipe", id: x.r.id, back })}>
+          <span class=${"x-ic rc-" + x.r.cat} aria-hidden="true">${HP.dishEmoji(x.r.emoji)}</span>
+          <span class="x-main">
+            <span class="x-t">${x.r.title}${moodBadge(x.r)}</span>
+            <span class="x-s"><span class="fr-have">✓ ${x.used.join(", ")}</span>${x.missing.length ? html` · fehlt: ${x.missing.map(name).join(", ")}` : " · alles da"}${x.r.time ? " · " + timeOf(x.r) : ""}</span>
+          </span>
+          <span class="go"><${Icon} n="next" s=${18} /></span>
+        </button>
+        ${x.missing.length > 0 && html`<button type="button" class="btn small ghost fr-buy" disabled=${busy} onClick=${() => run(() => toShopping(ctx, x.r, x.missing))}><${Icon} n="cart" s=${16} />${x.missing.length === 1 ? "Das Fehlende" : "Die " + x.missing.length + " fehlenden"} auf die Liste</button>`}
+      </div>`;
+  }
+  function FridgeSheet({ ctx, o: o0, onClose }) {
+    const { home, act, data } = ctx;
+    const items = home.fridge || [];
+    const [draft, setDraft] = useState("");
+    const [armed, setArmed] = useState(false);
+    const [more, setMore] = useState({});
+    const [quick, setQuick] = useState(() => !items.length);
+    const [o, setO] = useState(() => o0 || { basics: true, cats: ["main"], diet: home.gf ? ["gf"] : [], time: 0 });
+    useEffect(() => { if (!armed) return; const t = setTimeout(() => setArmed(false), 4000); return () => clearTimeout(t); }, [armed]);
+    const has = x => items.some(y => y.toLowerCase() === x.toLowerCase());
+    const save = list => act.patchHome(home.id, { fridge: list.slice(0, 60) });
+    const add = text => {
+      const parts = String(text || "").split(/[,;\n]+/).map(x => x.trim().slice(0, 40)).filter(Boolean);
+      const next = items.slice();
+      parts.forEach(x => { if (!next.some(y => y.toLowerCase() === x.toLowerCase())) next.push(x.charAt(0).toUpperCase() + x.slice(1)); });
+      if (next.length !== items.length) save(next);
+      setDraft("");
+    };
+    const remove = x => save(items.filter(y => y !== x));
+    /* What was ticked off on the shopping list in the last seven days: probably in the fridge now. */
+    const recent = useMemo(() => {
+      const since = Date.now() - 7 * 86400000, seen = new Set(), out = [];
+      (data.shopping || []).filter(it => it.done && it.doneAt > since).sort((a, b) => b.doneAt - a.doneAt).forEach(it => {
+        const n = it.name.trim(), k = n.toLowerCase();
+        if (!seen.has(k) && !has(n) && ["produce", "dairy", "meat", "frozen", "bakery"].indexOf(it.sec) >= 0) { seen.add(k); out.push(n); }
+      });
+      return out.slice(0, 12);
+    }, [data.shopping, items]);
+    const pool = useMemo(() => poolOf(data.recipes || []), [data.recipes]);
+    const res = useMemo(() => HP.fridgeSuggest(pool, items, o), [pool, items, o]);
+    const groups = [[0, "✅ Sofort kochbar", "Alles da (Kräuter zum Garnieren ausgenommen)."], [1, "🛒 Fehlt nur wenig", "Eine oder zwei Zutaten kaufen."], [2, "Mit etwas mehr Einkauf", ""]]
+      .map(([g, title, hint]) => ({ g, title, hint, list: res.filter(x => x.group === g) })).filter(x => x.list.length);
+    const back = { t: "fridge", o };
+    const setOpt = p => setO(prev => Object.assign({}, prev, p));
+    return html`
+      <${Sheet} title="Kühlschrank" onClose=${onClose} closeLabel="Fertig">
+        <p class="hint">Was ist noch da? Die App sucht Rezepte, die möglichst viel davon verwerten und wenig Einkauf brauchen. Die Liste gilt für den ganzen Haushalt.</p>
+        <div class="inline">
+          <label class="sr" for="hp-fr-add">Zutat hinzufügen</label>
+          <input id="hp-fr-add" class="input" maxlength="120" autocomplete="off" placeholder="z. B. Zucchetti, Feta, Rahm" value=${draft}
+            onInput=${e => setDraft(e.target.value)} onKeyDown=${e => { if (e.key === "Enter") { e.preventDefault(); add(draft); } }} />
+          <button type="button" class="btn" onClick=${() => add(draft)}>Dazu</button>
+        </div>
+        ${items.length > 0 && html`
+          <div class="fgroup">
+            <span class="label">Im Kühlschrank (${items.length})</span>
+            <div class="chips">${items.map(x => html`<button type="button" key=${x} class="chip mini on" aria-label=${x + " entfernen"} onClick=${() => remove(x)}>${x}<span class="chip-x" aria-hidden="true">✕</span></button>`)}</div>
+            <div><button type="button" class="btn small ghost" onClick=${() => (armed ? (save([]), setArmed(false)) : setArmed(true))}>${armed ? "Wirklich alles leeren? Nochmal tippen" : "Alles leeren"}</button></div>
+          </div>`}
+        ${recent.length > 0 && html`
+          <div class="fgroup">
+            <span class="label">Kürzlich eingekauft</span>
+            <div class="chips">${recent.map(x => html`<button type="button" key=${x} class="chip mini" onClick=${() => add(x)}><span class="emo" aria-hidden="true">+</span>${x}</button>`)}</div>
+          </div>`}
+        <details class="fquick" open=${quick} onToggle=${e => setQuick(e.target.open)}>
+          <summary>Schnell wählen</summary>
+          <div class="chips">${HP.FRIDGE_COMMON.filter(x => !has(x)).map(x => html`<button type="button" key=${x} class="chip mini" onClick=${() => add(x)}>${x}</button>`)}</div>
+        </details>
+        <details class="fquick">
+          <summary>Was gesucht wird${o.cats.length || o.diet.length || o.time ? " (" + [o.cats.map(c => HP.recipeCat(c).label).join(", "), o.diet.map(d => (HP.DIETS.find(x => x.id === d) || {}).label).join(", "), o.time ? "bis " + o.time + " Min." : ""].filter(Boolean).join(" · ") + ")" : ""}</summary>
+          <div class="stack">
+            <label class="check"><input id="hp-fr-basics" type="checkbox" checked=${o.basics} onChange=${e => setOpt({ basics: e.target.checked })} /><span>Grundvorrat ist da: Salz, Öl, Zwiebeln, Knoblauch, Gewürze, Bouillon</span></label>
+            <${Chips} label="Gang" items=${FRIDGE_CATS} value=${o.cats} multi=${true} onChange=${v => setOpt({ cats: v })} mini=${true} />
+            <${Chips} label="Ernährung" items=${FRIDGE_DIET} value=${o.diet} multi=${true} onChange=${v => setOpt({ diet: v })} mini=${true} />
+            <${Chips} label="Zeit" items=${TIME_CHIPS} value=${o.time} onChange=${v => setOpt({ time: v })} mini=${true} />
+          </div>
+        </details>
+        <section class="fridge-out" aria-live="polite">
+          ${!items.length && html`<p class="calm"><span class="emo" aria-hidden="true">🧊</span>Tippe oben an, was da ist, oder schreib es ins Feld (mehrere mit Komma).</p>`}
+          ${items.length > 0 && !res.length && html`<p>Dazu passt kein Rezept. Füg mehr Zutaten hinzu, oder erlaube unter «Was gesucht wird» weitere Gänge.</p>`}
+          ${groups.map(g => html`
+            <div class="stack" key=${g.g}>
+              <h2 class="aisle">${g.title}<span class="aisle-n">${g.list.length}</span></h2>
+              ${g.hint && html`<p class="hint">${g.hint}</p>`}
+              <div class="frows">${g.list.slice(0, more[g.g] ? 60 : 6).map(x => html`<${FridgeRow} key=${x.r.id} ctx=${ctx} x=${x} back=${back} />`)}</div>
+              ${g.list.length > 6 && !more[g.g] && html`<div><button type="button" class="btn small" onClick=${() => setMore(Object.assign({}, more, { [g.g]: true }))}><${Icon} n="down" s=${16} />Alle ${g.list.length} zeigen</button></div>`}
+            </div>`)}
+        </section>
       <//>`;
   }
 
@@ -894,5 +1001,5 @@
       <//>`;
   }
 
-  Object.assign(U, { Recipes, RecipeView, RecipeForm, MealSheet, ImportSheet, BookSheet, FinderSheet, MoodPick, GlutenBox, addNote, adoptRecipe: adopt, findRecipe, dailyIdea, recipeMeta: metaOf });
+  Object.assign(U, { Recipes, RecipeView, RecipeForm, MealSheet, ImportSheet, BookSheet, FinderSheet, FridgeSheet, MoodPick, GlutenBox, addNote, adoptRecipe: adopt, findRecipe, dailyIdea, recipeMeta: metaOf });
 })();

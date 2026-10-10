@@ -21,7 +21,7 @@ files.forEach(f => {
 const HP = sandbox.window.HP, raw = sandbox.window.HP_IDEEN || [];
 
 /* Meat and fish, also inside compound words ("Pouletbrust", "Rindsbouillon"), but not "gehackt", "Kuchenteig" or "Käserinde". */
-const MEAT = /(fleisch|poulet|huhn|hühner|hähnchen|chicken|(?<![a-zäöü])rinds?(?![a-zäöü]*e\b)|rindfleisch|kalb|schwein|(?<![a-zäöü])lamm|(?<![a-zäöüg])hack|wurst|würst|cervelat|salami|schinken|speck|bacon|lachs|thon|thunfisch|fisch|crevetten|garnelen|scampi|muscheln|tintenfisch|calamar|steak|plätzli|chorizo|prosciutto|pancetta|guanciale|bresaola|sardellen|anchovis|gelatine|austernsauce|(?<![a-zäöü])dashi(?![a-zäöü]*\s*\(kombu)|bonito|worcestershire|(?<![a-zäöü])enten?(brust|keule)?(?![a-zäöü])|entrecôte|kotelett|lardons|merguez|sucuk|geschnetzeltes|(?<![a-zäöü])filet)/i;
+const MEAT = /(fleisch|poulet|huhn|hühner|hähnchen|chicken|(?<![a-zäöü])rinds?(?![a-zäöü]*e\b)|rindfleisch|kalb|schwein|(?<![a-zäöü])lamm|(?<![a-zäöüg])hack|wurst|würst|cervelat|salami|schinken|speck|bacon|lachs|thon|thunfisch|fisch|forelle|dorade|matjes|egli|felchen|zander|makrele|sardine|kabeljau|seelachs|crevetten|garnelen|scampi|muscheln|tintenfisch|calamar|steak|plätzli|chorizo|prosciutto|pancetta|guanciale|bresaola|sardellen|anchovis|gelatine|austernsauce|(?<![a-zäöü])dashi(?![a-zäöü]*\s*\(kombu)|bonito|worcestershire|(?<![a-zäöü])enten?(brust|keule)?(?![a-zäöü])|entrecôte|kotelett|lardons|merguez|sucuk|geschnetzeltes|(?<![a-zäöü])filet)/i;
 const ANIMAL = /(milch|rahm|butter|käse|joghurt|jogurt|\bei\b|\beier\b|eigelb|eiweiss|honig|quark|mozzarella|parmesan|pecorino|gruyère|sbrinz|feta|mascarpone|ricotta|halloumi|labneh|ghee|paneer|crème fraîche|creme fraiche|sauerrahm|schmand|raclettekäse|bratbutter|butterschmalz)/i;
 const PLANT = /(kokos|hafer|soja|mandel|reis|erbsen|cashew|dinkel)[- ]?(milch|rahm|joghurt|drink|sahne)|erdnussbutter|mandelbutter|pflanzenbutter|vegane?[rsn]?\s+\w+|margarine|kakaobutter|butterbohnen|butternut|buttermilch-ersatz/gi;
 const STYLE_BAD = [[/ß/, "ß statt ss"], [/\bSahne\b/i, "Sahne statt Rahm"], [/Hähnchen/i, "Hähnchen statt Poulet"], [/Möhre/i, "Möhre statt Rüebli"], [/Schlagsahne/i, "Schlagsahne statt Rahm"]];
@@ -83,7 +83,7 @@ raw.forEach((x, i) => {
 const full = !process.argv.slice(2).some(a => /\.js$/.test(a));
 if (full) {
   HP.KITCHENS.forEach(k => { if ((perKitchen[k.id] || 0) < 2) errors.push("Küche " + k.label + ": nur " + (perKitchen[k.id] || 0) + " Rezepte"); });
-  if (raw.length < 250) errors.push("Das Rezeptbuch hat erst " + raw.length + " Rezepte");
+  if (raw.length < 400) errors.push("Das Rezeptbuch hat erst " + raw.length + " Rezepte");
   if ((perColl.glasiert || 0) < 10) errors.push("Sammlung «Glasiertes Poulet mit Reis»: erst " + (perColl.glasiert || 0));
   if ((perColl.ottolenghi || 0) < 10) errors.push("Sammlung «Im Stil von Ottolenghi»: erst " + (perColl.ottolenghi || 0));
   if (HP.ideas().length !== raw.length) errors.push("HP.ideas() liest " + HP.ideas().length + " von " + raw.length);

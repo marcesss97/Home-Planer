@@ -126,13 +126,13 @@ window.HP_IDEEN = (window.HP_IDEEN || []).concat([
       "Zwiebel und Peperoni 2 Minuten mitbraten. Austernsauce, Fischsauce, Zucker und 3 EL Wasser dazugeben, Cashewnüsse und Frühlingszwiebeln untermischen und mit dem Reis servieren."]
   },
   {
-    id: "idee-lecso-mit-wurst", title: "Lecsó mit Paprikawurst", kitchen: "east", emoji: "peperoni", cat: "main", tags: ["quick", "cheap"], time: 30, serves: 4,
-    note: "Ungarisches Sommergericht aus geschmorten Peperoni, Tomaten und Zwiebeln, je nach Familie mit Wurst oder Ei. Statt Debrecziner passen Cervelat oder geräucherte Wienerli. Dazu Brot oder Reis.",
-    ingr: ["4 Peperoni, gemischt (ca. 700 g)", "2 Zwiebeln", "4 Tomaten (ca. 500 g)", "250 g Debrecziner oder Cervelat", "2 EL Rapsöl", "1 EL Paprikapulver, edelsüss", "1 TL Zucker", "Salz, Pfeffer", "Brot zum Servieren"],
-    steps: ["Zwiebeln in Streifen schneiden. Peperoni entkernen und in breite Streifen schneiden. Tomaten grob würfeln, Debrecziner in Scheiben schneiden.",
-      "Rapsöl in einer weiten Pfanne erhitzen und die Wurst darin 2–3 Minuten anbraten, herausnehmen. Zwiebeln im Bratfett etwa 4 Minuten glasig dünsten.",
-      "Pfanne kurz vom Herd ziehen und das Paprikapulver einrühren, es verbrennt sonst leicht. Peperoni dazugeben und zugedeckt etwa 8 Minuten dünsten.",
-      "Tomaten, Zucker und Wurst dazugeben, salzen und offen weitere 8–10 Minuten schmoren, bis die Peperoni weich sind und die Sauce sämig ist. Mit Pfeffer abschmecken und mit Brot servieren."]
+    id: "idee-cevapcici-ajvar", title: "Ćevapčići mit Ajvar und Zwiebeln", kitchen: "east", emoji: "fleisch", cat: "main", tags: ["quick", "kids"], time: 30, serves: 4,
+    note: "Die kleinen Hackfleischröllchen vom Balkan, in der Pfanne oder auf dem Grill gebraten. Ajvar, die Paste aus gerösteten Peperoni, gibt es bei Migros und Coop. Dazu Fladenbrot oder Reis.",
+    ingr: ["600 g Hackfleisch, gemischt (Rind und Schwein oder Lamm)", "1 kleine Zwiebel", "3 Knoblauchzehen, gepresst", "1 TL Paprikapulver, edelsüss", "½ TL Natron oder Backpulver", "1 TL Salz", "Pfeffer", "2 rote Zwiebeln", "1 EL Rapsöl", "1 Glas Ajvar (ca. 200 g)", "150 g Sauerrahm", "4 Fladenbrote oder Pita"],
+    steps: ["Die kleine Zwiebel fein reiben. Hackfleisch mit Zwiebel, Knoblauch, Paprikapulver, Natron, Salz und Pfeffer in einer Schüssel 2–3 Minuten kräftig kneten, bis die Masse leicht klebt.",
+      "Mit nassen Händen fingerlange, daumendicke Röllchen formen und 10 Minuten kühl stellen. Inzwischen die roten Zwiebeln fein hacken.",
+      "Rapsöl in einer grossen Bratpfanne oder Grillpfanne stark erhitzen und die Ćevapčići darin unter Wenden 8–10 Minuten braten, bis sie rundum gebräunt und durchgegart sind.",
+      "Fladenbrote in der Pfanne kurz erwärmen. Ćevapčići mit roten Zwiebeln, Ajvar und Sauerrahm in oder neben den Fladenbroten servieren."]
   },
   {
     id: "idee-trocken-gebratene-bohnen", title: "Trocken gebratene grüne Bohnen", kitchen: "cn", emoji: "gemuese", cat: "main", tags: ["vegi", "vegan", "quick"], time: 25, serves: 4,
@@ -185,22 +185,24 @@ window.HP_IDEEN = (window.HP_IDEEN || []).concat([
       "Schalotten, Knoblauch, Chili und Ingwer im verbliebenen Öl 2 Minuten anbraten. Bohnen, Kecap Manis, Sojasauce und 2 EL Wasser dazugeben, Tempeh zurück in den Wok geben und schwenken, bis alles glänzend überzogen ist. Mit Limettensaft abschmecken und mit dem Reis servieren."]
   },
   {
-    id: "idee-pfannenlachs-dill-senf", title: "Pfannenlachs mit Dill-Senf-Sauce", kitchen: "nord", emoji: "fisch", cat: "main", tags: ["quick"], time: 25, serves: 4,
-    note: "Skandinavisch inspiriert: Lachs mit knuspriger Haut und eine kalte Sauce aus Senf, Honig und Dill, wie man sie zu Gravlax kennt. Dazu Salzkartoffeln oder ein Gurkensalat.",
-    ingr: ["4 Lachsfilets mit Haut (à ca. 150 g)", "800 g kleine Kartoffeln, festkochend", "2 EL mittelscharfer Senf", "1 EL Honig", "1 EL Weissweinessig", "4 EL Rapsöl", "20 g Butter", "1 Bund Dill", "Salz, Pfeffer"],
-    steps: ["Kartoffeln in Salzwasser 18–20 Minuten weich kochen.",
-      "Für die Sauce Senf, Honig und Weissweinessig verrühren und 3 EL Rapsöl langsam einrühren. Dill fein hacken, die Hälfte dazugeben und mit Salz und Pfeffer abschmecken.",
-      "Lachsfilets trocken tupfen und salzen. Restliches Rapsöl in einer Bratpfanne erhitzen und die Filets auf der Hautseite 4–5 Minuten knusprig braten.",
-      "Wenden, Butter dazugeben und den Lachs noch 1–2 Minuten fertig garen, innen darf er glasig bleiben. Kartoffeln abgiessen und mit dem restlichen Dill bestreuen. Lachs mit Kartoffeln und Sauce anrichten."]
+    id: "idee-bangers-and-mash", title: "Bangers and Mash mit Zwiebelsauce", kitchen: "nord", emoji: "fleisch", cat: "main", tags: ["quick", "kids"], time: 30, serves: 4,
+    note: "Englisches Pub-Essen: gebratene Würste auf Kartoffelstock mit dunkler Zwiebelsauce. Statt englischer Würste passen grobe Schweins- oder Kalbsbratwürste. Die Sauce ist mit Maizena gebunden, also glutenfrei, wenn es die Würste auch sind.",
+    ingr: ["8 Schweinsbratwürste oder Kalbsbratwürste", "1 kg Kartoffeln, mehligkochend", "1,5 dl Milch", "40 g Butter", "2 Zwiebeln", "1 EL Rapsöl", "1 TL Zucker", "3 dl Bouillon", "1 TL Worcestershire-Sauce", "1 TL Senf", "2 TL Maizena", "200 g Erbsen, tiefgekühlt", "Salz, Pfeffer, Muskat"],
+    steps: ["Kartoffeln schälen, in Stücke schneiden und in Salzwasser 15–20 Minuten weich kochen.",
+      "Zwiebeln in feine Ringe schneiden. Rapsöl in einer Bratpfanne erhitzen und die Würste darin bei mittlerer Hitze 12–15 Minuten rundum braten, bis sie gebräunt und durch sind. Herausnehmen und warm stellen.",
+      "Zwiebeln im Bratfett mit dem Zucker 6–8 Minuten goldbraun braten. Bouillon, Worcestershire-Sauce und Senf dazugeben und aufkochen. Maizena mit 2 EL kaltem Wasser anrühren, einrühren und köcheln, bis die Sauce bindet. Mit Pfeffer abschmecken.",
+      "Erbsen in wenig Salzwasser 3 Minuten garen. Kartoffeln abgiessen. Milch und Butter erhitzen und mit den Kartoffeln zu einem lockeren Kartoffelstock stampfen, mit Salz und Muskat würzen.",
+      "Kartoffelstock auf Teller verteilen, die Würste daraufsetzen und mit der Zwiebelsauce übergiessen. Erbsen dazu servieren."]
   },
   {
-    id: "idee-crevetten-saganaki", title: "Crevetten-Saganaki mit Feta", kitchen: "gr", emoji: "pfanne", cat: "main", tags: ["quick", "guests"], time: 25, serves: 4,
-    note: "Griechisches Pfannengericht: Crevetten in würziger Tomatensauce mit einem Schuss Ouzo, darüber zerbröckelter Feta. Den Ouzo kann man weglassen oder durch Weisswein ersetzen. Dazu Brot zum Tunken oder Reis.",
-    ingr: ["500 g rohe Crevetten, geschält", "1 Zwiebel", "2 Knoblauchzehen", "1 Dose gehackte Tomaten (400 g)", "½ TL Chiliflocken", "1 TL Oregano", "2 EL Ouzo (nach Belieben)", "150 g Feta", "3 EL Olivenöl", "½ Bund Petersilie", "Salz, Pfeffer", "Brot zum Servieren"],
-    steps: ["Zwiebel und Knoblauch fein hacken und im Olivenöl in einer weiten Bratpfanne etwa 4 Minuten weich dünsten.",
-      "Tomaten, Chiliflocken und Oregano dazugeben, salzen und offen etwa 10 Minuten zu einer dicken Sauce einköcheln.",
-      "Crevetten in die Sauce legen, Ouzo dazugiessen und 2–3 Minuten köcheln, bis die Crevetten gerade rosa sind.",
-      "Feta darüberbröckeln, zudecken und 2 Minuten ziehen lassen, bis der Käse weich wird. Mit Pfeffer und gehackter Petersilie bestreuen und mit Brot servieren."]
+    id: "idee-jeyuk-bokkeum", title: "Jeyuk Bokkeum (scharfes Schweinefleisch)", kitchen: "kr", emoji: "fleisch", cat: "main", tags: ["quick"], time: 25, serves: 4,
+    note: "Koreanisches Alltagsgericht: dünn geschnittenes Schweinefleisch in süss-scharfer Gochujang-Marinade, kurz und heiss gebraten. Man isst es mit Reis, gern in Salatblätter gewickelt. Schweinshals bleibt saftiger als Plätzli.",
+    ingr: ["600 g Schweinshals oder Schweinsplätzli, in dünnen Scheiben", "2 EL Gochujang", "½ TL Chiliflocken oder Gochugaru", "3 EL Sojasauce", "1 EL Zucker", "1 EL Sesamöl", "3 Knoblauchzehen, gepresst", "1 Stück Ingwer (2 cm), gerieben", "1 Zwiebel", "1 Rüebli", "4 Frühlingszwiebeln", "2 EL Rapsöl", "300 g Rundkornreis", "1 Kopfsalat", "1 TL Sesamsamen"],
+    steps: ["Rundkornreis nach Packungsangabe kochen, meist etwa 15 Minuten.",
+      "Gochujang, Chiliflocken, Sojasauce, Zucker, Sesamöl, Knoblauch und Ingwer verrühren. Schweinshals in mundgerechte Stücke schneiden, mit der Marinade mischen und mindestens 10 Minuten ziehen lassen.",
+      "Inzwischen Zwiebel in Streifen, Rüebli in dünne Scheiben und Frühlingszwiebeln in 4 cm lange Stücke schneiden. Kopfsalat in Blätter zerteilen und waschen.",
+      "Rapsöl im Wok oder in einer grossen Bratpfanne stark erhitzen. Fleisch samt Marinade darin 5–6 Minuten braten, bis es gar ist und leicht karamellisiert. Zwiebel und Rüebli dazugeben und 2–3 Minuten mitbraten.",
+      "Frühlingszwiebeln untermischen und mit Sesamsamen bestreuen. Mit dem Reis und den Salatblättern servieren: Fleisch und etwas Reis in ein Blatt wickeln und von Hand essen."]
   },
   {
     id: "idee-kadai-paneer", title: "Kadai Paneer", kitchen: "in", emoji: "curry", cat: "main", tags: ["vegi", "quick"], time: 30, serves: 4,
@@ -244,14 +246,14 @@ window.HP_IDEEN = (window.HP_IDEEN || []).concat([
       "Bulgur, Gemüse und Halloumi in Schalen anrichten, Minzjoghurt daraufgeben und mit der restlichen Minze bestreuen."]
   },
   {
-    id: "idee-miso-lachs-bowl", title: "Miso-Lachs-Bowl mit Edamame", kitchen: "jp", emoji: "fisch", cat: "main", tags: ["quick"], time: 25, serves: 4,
-    note: "Lachs mit einer Glasur aus Miso und Mirin, die in der Pfanne in einer Minute karamellisiert. Edamame gibt es tiefgekühlt bei Migros und Coop; grüne Erbsen gehen auch.",
-    ingr: ["300 g Sushireis oder Rundkornreis", "4 Lachsfilets ohne Haut (à ca. 130 g)", "2 EL helle Misopaste", "1 EL Mirin", "1 EL Sojasauce", "1 TL Zucker", "200 g Edamame, geschält, tiefgekühlt", "1 Gurke", "1 Avocado", "2 Frühlingszwiebeln", "2 EL Reisessig", "1 EL Rapsöl", "1 TL Sesamsamen", "Salz"],
-    steps: ["Sushireis in einem Sieb spülen, bis das Wasser klar ist, und nach Packungsangabe kochen, meist 12 Minuten plus 10 Minuten Quellzeit. Mit 1 EL Reisessig und einer Prise Salz mischen.",
-      "Misopaste, Mirin, Sojasauce und Zucker glatt rühren. Gurke in dünne Scheiben schneiden und mit dem restlichen Reisessig und einer Prise Salz mischen.",
-      "Edamame in kochendem Salzwasser 3 Minuten garen und abgiessen. Frühlingszwiebeln in feine Ringe, Avocado in Scheiben schneiden.",
-      "Lachsfilets in einer beschichteten Bratpfanne im Rapsöl pro Seite 2–3 Minuten braten. Hitze reduzieren, Misoglasur darüberstreichen und zugedeckt 1 Minute glasieren, bis sie leicht karamellisiert.",
-      "Reis in Schalen verteilen, Lachs, Edamame, Gurke und Avocado daraufgeben und mit Frühlingszwiebeln und Sesamsamen bestreuen."]
+    id: "idee-soboro-don", title: "Soboro-Don mit Poulethack, Ei und Erbsen", kitchen: "jp", emoji: "reis", cat: "main", tags: ["quick", "kids"], time: 25, serves: 4,
+    note: "Japanische Reisschale in drei Farben, beliebt im Bento: süss-salziges Poulethack, feines Rührei und grüne Erbsen. Poulethackfleisch gibt es bei Migros und Coop; Schweinshack geht auch.",
+    ingr: ["300 g Sushireis oder Rundkornreis", "400 g Poulethackfleisch", "4 EL Sojasauce", "2 EL Mirin", "2 EL Zucker", "1 Stück Ingwer (2 cm)", "4 Eier", "200 g Erbsen, tiefgekühlt", "1 EL Rapsöl", "Eingelegter Ingwer (Gari) zum Servieren", "Salz"],
+    steps: ["Sushireis spülen und nach Packungsangabe kochen, meist 12 Minuten plus 10 Minuten Quellzeit.",
+      "Ingwer fein reiben. Poulethackfleisch mit Sojasauce, Mirin, 1½ EL Zucker und dem Ingwer in einer kalten Pfanne mit vier Stäbchen gut vermischen. Bei mittlerer Hitze unter ständigem Rühren 5–6 Minuten garen, bis das Fleisch fein krümelig und die Flüssigkeit fast verkocht ist.",
+      "Eier mit einer Prise Salz und dem restlichen Zucker verquirlen. Rapsöl in einer beschichteten Pfanne bei kleiner Hitze erwärmen, die Eier hineingiessen und unter ständigem Rühren mit Stäbchen 2–3 Minuten zu einem feinen, trockenen Rührei stocken lassen.",
+      "Erbsen in kochendem Salzwasser 3 Minuten garen und abgiessen.",
+      "Reis in Schalen verteilen und Poulethack, Rührei und Erbsen in Streifen nebeneinander darauf anrichten. Mit eingelegtem Ingwer servieren."]
   },
   {
     id: "idee-koreanische-tofu-bowl", title: "Koreanische Tofu-Bowl mit Gochujang", kitchen: "kr", emoji: "reis", cat: "main", tags: ["vegi", "vegan", "quick"], time: 30, serves: 4,
@@ -326,14 +328,14 @@ window.HP_IDEEN = (window.HP_IDEEN || []).concat([
       "Mit der Tahinisauce und nach Belieben etwas Amba beträufeln und sofort essen."]
   },
   {
-    id: "idee-fisch-tacos-kabis", title: "Fisch-Tacos mit Kabis-Slaw", kitchen: "latam", emoji: "taco", cat: "main", tags: ["quick"], time: 25, serves: 4,
-    note: "Wie an der Baja California: knusprig gebratener weisser Fisch in Maistortillas, mit knackigem Kabis und Limettensauce. Mit Maizena statt Mehl paniert und darum glutenfrei.",
-    ingr: ["500 g weisses Fischfilet (z. B. Kabeljau oder Pangasius)", "3 EL Maizena", "1 TL Paprikapulver", "½ TL Kreuzkümmel", "12 kleine Maistortillas", "250 g Weisskabis oder Rotkabis", "2 Limetten", "1 dl Sauerrahm", "2 EL Mayonnaise", "1 Avocado", "½ Bund Koriander", "1 rote Chilischote", "3 EL Rapsöl", "Salz"],
-    steps: ["Kabis sehr fein hobeln, mit dem Saft einer Limette und ½ TL Salz mischen und kurz durchkneten. Chilischote in feine Ringe schneiden.",
-      "Sauerrahm mit Mayonnaise, etwas Limettensaft und Salz zu einer Sauce verrühren. Avocado in Scheiben schneiden, Koriander zupfen.",
-      "Fischfilet in fingerdicke Streifen schneiden und salzen. Maizena mit Paprikapulver und Kreuzkümmel mischen und die Fischstreifen darin wenden.",
-      "Rapsöl in einer beschichteten Bratpfanne erhitzen und den Fisch pro Seite 2–3 Minuten knusprig braten. Maistortillas in einer trockenen Pfanne pro Seite etwa 30 Sekunden erwärmen.",
-      "Tortillas mit Kabis, Fisch, Avocado und Chili belegen, mit der Sauce beträufeln und mit Koriander und Limettenschnitzen servieren."]
+    id: "idee-rolex-uganda", title: "Rolex (Chapati-Rolle mit Ei aus Uganda)", kitchen: "afrika", emoji: "fladen", cat: "main", tags: ["vegi", "quick", "cheap"], time: 20, serves: 4,
+    note: "Der Name kommt von «rolled eggs»: In Uganda rollen Strassenstände Eier mit Kabis und Tomaten in ein frisches Chapati. Chapati gibt es im Indien-Laden oder tiefgekühlt; grosse Weizentortillas gehen auch.",
+    ingr: ["4 Chapati oder grosse Weizentortillas", "8 Eier", "150 g Weisskabis", "2 Tomaten", "1 kleine rote Zwiebel", "1 grüne Peperoni", "1 grüne Chilischote (nach Belieben)", "½ Bund Koriander", "3 EL Rapsöl", "Salz, Pfeffer", "Chilisauce zum Servieren"],
+    steps: ["Kabis sehr fein schneiden. Tomaten entkernen und klein würfeln, rote Zwiebel, Peperoni und Chilischote fein hacken, Koriander grob hacken.",
+      "Für jede Rolle 2 Eier mit einem Viertel des Gemüses, etwas Koriander, Salz und Pfeffer verquirlen.",
+      "Wenig Rapsöl in einer Bratpfanne erhitzen, die Eimasse hineingiessen und bei mittlerer Hitze etwa 2 Minuten stocken lassen. Ein Chapati direkt auf das noch leicht feuchte Ei legen, andrücken und alles zusammen wenden.",
+      "Das Chapati 1 Minute mitbraten, bis es warm ist und am Ei klebt. Auf ein Brett gleiten lassen, mit der Eiseite nach oben, und satt aufrollen. Mit den übrigen Eiern ebenso drei weitere Rollen machen.",
+      "Rollen schräg halbieren und mit Chilisauce servieren."]
   },
   {
     id: "idee-goezleme-spinat-feta", title: "Gözleme mit Spinat und Feta", kitchen: "levante", emoji: "fladen", cat: "main", tags: ["vegi", "quick"], time: 25, serves: 4,
@@ -425,13 +427,14 @@ window.HP_IDEEN = (window.HP_IDEEN || []).concat([
       "Kokosmilch einrühren und salzen. Eier rundum leicht einritzen, in die Sauce legen und 5 Minuten darin ziehen lassen. Mit Koriander bestreuen und mit dem Reis servieren."]
   },
   {
-    id: "idee-frittata-zucchetti-minze", title: "Frittata mit Zucchetti und Minze", kitchen: "it", emoji: "ei", cat: "main", tags: ["vegi", "quick", "cheap"], time: 25, serves: 4,
-    note: "Die italienische Pfannen-Omelette wird langsam gestockt und im Ofen fertig gebacken. Sie schmeckt warm wie kalt; Reste kommen am nächsten Tag ins Sandwich.",
-    ingr: ["2 Zucchetti (ca. 400 g)", "1 Zwiebel", "8 Eier", "50 g Parmesan, gerieben", "½ Bund Minze oder Basilikum", "3 EL Olivenöl", "Salz, Pfeffer", "Brot und grüner Salat zum Servieren"],
-    steps: ["Ofen auf 200 °C vorheizen (Umluft 180 °C).",
-      "Zucchetti in dünne Scheiben schneiden, Zwiebel fein hacken. Olivenöl in einer ofenfesten Bratpfanne erhitzen und das Gemüse darin 6–8 Minuten braten, bis es weich und leicht gebräunt ist. Salzen.",
-      "Eier mit Parmesan, gehackter Minze, Salz und Pfeffer verquirlen und über das Gemüse giessen. Bei kleiner Hitze 4–5 Minuten stocken lassen, bis der Rand fest ist.",
-      "Pfanne in den Ofen stellen und die Frittata 8–10 Minuten backen, bis sie in der Mitte gerade fest ist. Kurz ruhen lassen, in Stücke schneiden und mit Brot und Salat servieren."]
+    id: "idee-tofu-pak-choi-ingwer", title: "Tofu mit Pak Choi in Knoblauch-Ingwer-Sauce", kitchen: "cn", emoji: "gemuese", cat: "main", tags: ["vegi", "vegan", "quick"], time: 25, serves: 4,
+    note: "Ein schlichtes chinesisches Hausgericht: goldbraun gebratener Tofu und knackiger Pak Choi in einer glänzenden Sauce aus Sojasauce, Ingwer und Knoblauch. Statt Pak Choi gehen Broccoli oder Chinakohl.",
+    ingr: ["400 g Tofu nature, fest", "500 g Pak Choi (ca. 4 Stück)", "3 Knoblauchzehen", "1 Stück Ingwer (3 cm)", "2 Frühlingszwiebeln", "3 EL Sojasauce", "1 EL Hoisinsauce", "1 TL Zucker", "2 TL Maizena", "1 TL Sesamöl", "3 EL Rapsöl", "300 g Jasminreis"],
+    steps: ["Jasminreis nach Packungsangabe kochen, meist etwa 15 Minuten.",
+      "Tofu trocken tupfen und in 1 cm dicke, mundgerechte Scheiben schneiden. Pak Choi längs vierteln und waschen. Knoblauch und Ingwer fein hacken, Frühlingszwiebeln in Ringe schneiden. Sojasauce, Hoisinsauce, Zucker, Maizena und 1 dl Wasser verrühren.",
+      "2 EL Rapsöl in einer beschichteten Bratpfanne erhitzen und den Tofu darin pro Seite 3–4 Minuten goldbraun braten. Herausnehmen.",
+      "Restliches Öl im Wok erhitzen, Knoblauch und Ingwer kurz anbraten. Pak Choi dazugeben und 2–3 Minuten pfannenrühren, bis die Stiele knackig-weich sind.",
+      "Sauce dazugiessen und aufkochen, bis sie bindet. Tofu zurück in den Wok geben, kurz schwenken und mit Sesamöl beträufeln. Mit Frühlingszwiebeln bestreuen und mit dem Reis servieren."]
   },
 
   /* ---------- Kartoffeln, Polenta und Gnocchi ---------- */

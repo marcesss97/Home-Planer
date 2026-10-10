@@ -611,19 +611,20 @@ window.HP = (function () {
   ];
   var shopT = table(SHOP, "other");
   var SHOP_WORDS = {
-    produce: "apfel äpfel banane birne orange zitrone limette traube beere erdbeer himbeer heidelbeer kiwi mango ananas melone salat gurke tomate rüebli karotte peperoni paprika zwiebel knoblauch kartoffel härdöpfel lauch zucchetti zucchini aubergine brokkoli broccoli blumenkohl kohl spinat pilz champignon avocado ingwer kräuter basilikum petersilie schnittlauch koriander fenchel sellerie kürbis radiesli frucht früchte gemüse obst nektarine pfirsich aprikose zwetschge kirsche dill minze rosmarin thymian salbei majoran zitronengras schalotte chilischote randen rande choi sprossen rettich kabis krautstiel mais shiitake granatapfel peterli frühlingszwiebel",
-    bakery: "brot zopf gipfeli weggli brötchen toast baguette ciabatta croissant kuchen tortilla wrap fladen",
-    dairy: "milch käse joghurt jogurt yoghurt butter rahm quark mozzarella parmesan pecorino gruyère emmentaler appenzeller sbrinz vacherin raclettekäse feta eier mascarpone ricotta hüttenkäse crème creme fraîche fraiche skyr sauerrahm eigelb eiweiss paneer cheddar halloumi labneh ghee teig kuchenteig flammkuchenteig pizzateig",
-    meat: "fleisch poulet huhn hähnchen rind schwein kalb lamm hack wurst cervelat salami schinken speck guanciale pancetta chorizo lachs thon fisch forelle crevetten steak filet plätzli bratwurst geschnetzeltes wienerli",
-    pantry: "pasta teigwaren spaghetti nudeln penne hörnli reis risotto mehl zucker salz pfeffer öl olivenöl essig gewürz konserve bohnen linsen kichererbsen sauce sosse ketchup senf mayo honig konfi marmelade müesli muesli haferflocken cornflakes kaffee tee bouillon tomatenpüree passata nüsse mandeln couscous quinoa tofu hefe backpulver sesam kokosmilch currypaste maizena tortilla magronen makkaroni lasagne gnocchi brühe gemüsebrühe apfelmus tomatenmark polenta bulgur paniermehl linguine trofie spätzli rösti erdnussbutter kokosrahm fischsauce glasnudeln tahini harissa miso mirin gochujang kecap sambal sriracha hoisin kombu nori wakame algen bonito panko kapern oliven pistazien pinienkerne rosinen sultaninen kokosraspel datteln graupen gerste lorbeer safran kurkuma kardamom sternanis zimt kümmel masala sumach za'atar zaatar hanout biber chiliflocken chilipaste chilipulver currypulver kakao bockshornklee salsa guacamole kimchi freekeh pesto granatapfelsirup reisessig rotweinessig weissweinessig sherryessig apfelessig malzessig balsamico tamarinde kürbiskerne korianderpulver koriandersamen cocktailkirsche cornichons essiggurke eingelegte röstzwiebel gehackte pizzamehl",
+    produce: "apfel äpfel banane birne orange zitrone limette traube beere erdbeer himbeer heidelbeer kiwi mango ananas melone salat gurke tomate rüebli karotte peperoni paprika zwiebel knoblauch kartoffel härdöpfel lauch zucchetti zucchini aubergine brokkoli broccoli blumenkohl kohl spinat pilz champignon avocado ingwer kräuter basilikum petersilie schnittlauch koriander fenchel sellerie kürbis radiesli frucht früchte gemüse obst nektarine pfirsich aprikose zwetschge kirsche dill minze rosmarin thymian salbei majoran zitronengras schalotte chilischote randen rande choi sprossen rettich kabis krautstiel mais shiitake granatapfel peterli frühlingszwiebel rucola pandan marroni spargel wirz chicorée chicoree grapefruit sauerkraut curryblätter",
+    bakery: "brot zopf gipfeli weggli brötchen toast baguette ciabatta croissant kuchen tortilla wrap fladen piadina piadine pfünderli bagel muffin",
+    dairy: "milch käse joghurt jogurt yoghurt butter rahm quark mozzarella parmesan pecorino gruyère emmentaler appenzeller sbrinz vacherin raclettekäse feta eier mascarpone ricotta hüttenkäse crème creme fraîche fraiche skyr sauerrahm eigelb eiweiss paneer cheddar halloumi labneh ghee teig kuchenteig flammkuchenteig pizzateig gorgonzola yufka haferdrink",
+    meat: "fleisch poulet huhn hähnchen rind schwein kalb lamm hack wurst cervelat salami schinken speck guanciale pancetta chorizo lachs thon fisch forelle crevetten steak filet plätzli bratwurst geschnetzeltes wienerli rippli dorade muschel matjes",
+    pantry: "pasta teigwaren spaghetti nudeln penne hörnli reis risotto mehl zucker salz pfeffer öl olivenöl essig gewürz konserve bohnen linsen kichererbsen sauce sosse ketchup senf mayo honig konfi marmelade müesli muesli haferflocken cornflakes kaffee tee bouillon tomatenpüree passata nüsse mandeln couscous quinoa tofu hefe backpulver sesam kokosmilch currypaste maizena tortilla magronen makkaroni lasagne gnocchi brühe gemüsebrühe apfelmus tomatenmark polenta bulgur paniermehl linguine trofie spätzli rösti erdnussbutter kokosrahm fischsauce glasnudeln tahini harissa miso mirin gochujang kecap sambal sriracha hoisin kombu nori wakame algen bonito panko kapern oliven pistazien pinienkerne rosinen sultaninen kokosraspel datteln graupen gerste lorbeer safran kurkuma kardamom sternanis zimt kümmel masala sumach za'atar zaatar hanout biber chiliflocken chilipaste chilipulver currypulver kakao bockshornklee salsa guacamole kimchi freekeh pesto granatapfelsirup reisessig rotweinessig weissweinessig sherryessig apfelessig malzessig balsamico tamarinde kürbiskerne korianderpulver koriandersamen cocktailkirsche cornichons essiggurke eingelegte röstzwiebel gehackte pizzamehl ahornsirup ingwerpulver knoblauchpulver maiskörner ajvar hummus tempeh udon fusilli orecchiette rigatoni casarecce berbere berberitzen nelken anis gelatine espresso griess natron vanilleschote chiasamen sonnenblumenkerne jalapeño cannelloni chipotle piment cranberries",
     frozen: "tiefkühl glace pizza pommes eiswürfel edamame erbsen teigblätter",
     drinks: "wasser mineral saft apfelsaft orangensaft bier wein rotwein weisswein prosecco cola eistee sirup limonade rivella kombucha milchdrink sake amaretto marsala kirsch ananassaft",
-    sweets: "schoggi schokolade chips guetzli keks bonbon gummibär snack popcorn riegel praline nutella biscuit marzipan",
+    sweets: "schoggi schokolade chips guetzli keks bonbon gummibär snack popcorn riegel praline nutella biscuit marzipan amaretti läckerli leckerli meringue",
     care: "shampoo duschgel seife zahnpasta zahnbürste deo sonnencreme taschentücher watte rasier tampons binden windeln pflaster medikament dafalgan handcreme bodylotion",
     clean: "putzmittel abwaschmittel spülmittel geschirrspül tabs waschmittel weichspüler wc-papier toilettenpapier haushaltpapier küchenpapier abfallsack kehrichtsack müllsack schwamm lappen entkalker alufolie frischhaltefolie backpapier batterie glühbirne kerze spiesse"
   };
   /* Wendungen aus mehreren Wörtern, die anders einzuordnen sind als ihr Hauptwort (Dosentomaten gehören in den Vorrat). */
-  var SHOP_PHRASES = { pantry: ["geschälte tomaten", "dose ananas", "ananasscheiben", "getrocknete shiitake", "getrocknete chili", "thon in"] };
+  var SHOP_PHRASES = { pantry: ["geschälte tomaten", "dose ananas", "ananasscheiben", "getrocknete shiitake", "getrocknete chili", "thon in", "getrocknete sardellen", "baked beans", "mais aus der dose"],
+    produce: ["grüne bohnen", "breite bohnen", "frische bohnen"], dairy: ["yufka-teigblätter"] };
   var SHOP_INDEX = [];
   Object.keys(SHOP_WORDS).forEach(function (sec) { SHOP_WORDS[sec].split(" ").forEach(function (w) { SHOP_INDEX.push({ w: w, sec: sec }); }); });
   Object.keys(SHOP_PHRASES).forEach(function (sec) { SHOP_PHRASES[sec].forEach(function (w) { SHOP_INDEX.push({ w: w, sec: sec }); }); });
@@ -893,7 +894,7 @@ window.HP = (function () {
      Coop, etwa Tamari statt Sojasauce) oder "contains" (das Gericht lebt von Weizen, Gerste oder Dinkel). Dazu, was auf dem
      Etikett zu prüfen ist. Wer ein eigenes Rezept als glutenfrei markiert, hat das letzte Wort. */
   var GF_SAFE = /glutenfrei|reisnudel|glasnudel|reispapier|reismehl|maismehl|maisgriess|maisstärke|maizena|maistortilla|kichererbsenmehl|buchweizen|mandelmehl|kokosmehl|kartoffelstärke|kartoffelmehl|tamari|hirse|quinoa|polenta|teffmehl|erdnussbutter|reiswaffel/g;
-  var GF_HARD = /seitan|weizengriess|hartweizengriess|(?<![a-zäöü])griess|dinkel|roggen|gerste|graupen|freekeh|grünkern|zwieback|biscuit|wantan|gyoza|teigblätter|strudelteig|filoteig|yufka|naan|malzbier/;
+  var GF_HARD = /seitan|weizengriess|hartweizengriess|(?<![a-zäöü])griess|dinkel|roggen|gerste|graupen|freekeh|grünkern|zwieback|biscuit|biskuit|läckerli|leckerli|lebkuchen|guetzli|wantan|gyoza|teigblätter|strudelteig|filoteig|yufka|naan|malzbier/;
   var GF_SWAP = [
     [/sojasauce|sojasosse|shoyu/, "Tamari (glutenfreie Sojasauce)"],
     [/hoisin|austernsauce|kecap|maggi|würzsauce/, "glutenfreie Variante (Etikett prüfen)"],
@@ -901,9 +902,10 @@ window.HP = (function () {
     [/spätzli|knöpfli/, "glutenfreie Spätzli oder Teigwaren"],
     [/mie-?nudel|udon|ramen|soba|yakisoba|eiernudel|weizennudel|chow.?mein/, "Reisnudeln"],
     [/spaghetti|penne|teigwaren|pasta|nudel|hörnli|magronen|makkaroni|tagliatelle|linguine|fusilli|rigatoni|orzo|farfalle|ravioli|tortellini|lasagne|cannelloni|trofie|vermicelli|fadennudel/, "glutenfreie Teigwaren"],
-    [/paniermehl|panko|semmelbrösel|brösel/, "glutenfreies Paniermehl"],
+    [/paniermehl|panko|semmelbrösel|(?<![a-zäöü])brösel/, "glutenfreies Paniermehl"],
     [/tortilla|wrap/, "Maistortillas"],
     [/couscous|bulgur/, "Quinoa oder Hirse"],
+    [/hafermilch|haferdrink|haferrahm/, "Mandel- oder Reisdrink (oder glutenfrei markierter Haferdrink)"],
     [/haferflocken|hafer/, "glutenfreie Haferflocken"],
     [/(?<![a-zäöü])bier/, "glutenfreies Bier"],
     [/malzessig/, "Weinessig"],
@@ -1066,6 +1068,90 @@ window.HP = (function () {
     return out;
   }
 
+  /* ---------- Kühlschrank: was noch da ist ---------- */
+  /* Eine Zutat aus dem Kühlschrank passt zu einer Rezeptzeile, wenn ihr Wortstamm darin steckt ("Zucchetti" zu
+     "2 Zucchetti, in Scheiben", "Poulet" zu "Pouletschenkel") oder über einen Oberbegriff ("Käse" zu "Gruyère",
+     "Pasta" zu "Penne"). Ganz kurze Wörter ("Ei") nur als ganzes Wort, nie in "Reis". */
+  var FRIDGE_SYN = {
+    "käse": "gruyère|emmentaler|appenzeller|sbrinz|parmesan|pecorino|mozzarella|raclette|vacherin|cheddar|tilsiter|reibkäse|bergkäse|feta|halloumi|ricotta|mascarpone|burrata|gorgonzola|ziegenkäse",
+    "pasta": "spaghetti|penne|teigwaren|hörnli|nudel|fusilli|tagliatelle|linguine|magronen|makkaroni|rigatoni|farfalle|orzo|lasagne|trofie|tortellini|ravioli",
+    "teigwaren": "spaghetti|penne|pasta|hörnli|nudel|fusilli|tagliatelle|linguine|magronen|makkaroni|rigatoni|farfalle|orzo|lasagne|trofie",
+    "nudeln": "spaghetti|penne|pasta|teigwaren|nudel|mie|udon|ramen|reisnudel|glasnudel",
+    "reis": "reis(?!essig|wein|papier|mehl|nudel)|basmati|jasmin|risotto|sushireis|klebreis",
+    "rahm": "rahm|sahne|crème fraîche|creme fraiche", "sahne": "rahm",
+    "hackfleisch": "hackfleisch|hack(?![a-zäöü])|ghackets|rindshack|lammhack|schweinshack", "hack": "hackfleisch|hack(?![a-zäöü])|ghackets",
+    "fleisch": "fleisch|poulet|rind|kalb|schwein|lamm|hack|geschnetzeltes|plätzli|steak",
+    "poulet": "poulet|huhn|hühner|chicken|hähnchen", "huhn": "poulet|huhn|chicken",
+    "fisch": "fisch(?!sauce)|lachs|thon|thunfisch|kabeljau|forelle|egli|zander|dorsch|seelachs|dorade",
+    "thunfisch": "thon|thunfisch", "thon": "thon|thunfisch",
+    "crevetten": "crevette|garnele|gamba|scampi", "garnelen": "crevette|garnele|gamba|scampi",
+    "pilze": "pilz|champignon|shiitake|steinpilz|austernpilz|kräuterseitling", "champignons": "champignon|pilz",
+    "joghurt": "joghurt|jogurt", "speck": "speck|bacon|pancetta|guanciale|lardons",
+    "wurst": "wurst|würst|wienerli|cervelat|chorizo|salsiz|bratwurst|merguez",
+    "kartoffeln": "kartoffel|härdöpfel", "kartoffel": "kartoffel|härdöpfel", "tomaten": "tomate|passata|pelati",
+    "peperoni": "peperoni|paprikaschote", "paprika": "peperoni", "eier": "ei|eier|eigelb|eiweiss", "ei": "ei|eier|eigelb|eiweiss",
+    "brot": "brot|baguette|toast|ciabatta|zopf|brötchen|pita|fladen", "salat": "salat|lattich|rucola|nüsslisalat|eisberg|kopfsalat",
+    "zwiebeln": "zwiebel|schalotte", "kräuter": "basilikum|petersilie|peterli|schnittlauch|koriander|dill|minze|thymian|rosmarin|salbei|kräuter",
+    "bohnen": "bohnen|kidney|borlotti", "linsen": "linsen", "tofu": "tofu", "spinat": "spinat", "zucchini": "zucchetti|zucchini", "zucchetti": "zucchetti|zucchini",
+    "karotten": "rüebli|karotte", "möhren": "rüebli|karotte", "rüebli": "rüebli|karotte"
+  };
+  /* Was fast immer im Haus ist; zählt nicht als fehlend, wenn "Grundvorrat ist da" gilt. */
+  var BASIC = /(^|[^a-zäöü])(zwiebel|knoblauch|senf|honig|tomatenpüree|tomatenmark|sojasauce|maizena|backpulver|zimt|lorbeer|currypulver|curry(?![a-zäöü])|paprikapulver|chiliflocken|oregano|muskat|kreuzkümmel|kurkuma|cayenne|getrocknet|wasser|eis(?![a-zäöü])|eiswürfel|vanillezucker|puderzucker|rohzucker|brauner zucker|rapsöl|sonnenblumenöl|sesamöl|balsamico|weissweinessig|rotweinessig|apfelessig|reisessig)/;
+  var FRIDGE_COMMON = ["Eier", "Poulet", "Hackfleisch", "Lachs", "Tofu", "Speck", "Reis", "Pasta", "Kartoffeln", "Brot", "Tomaten", "Zucchetti", "Peperoni", "Spinat", "Brokkoli",
+    "Pilze", "Rüebli", "Lauch", "Kürbis", "Aubergine", "Käse", "Feta", "Mozzarella", "Rahm", "Joghurt", "Kichererbsen", "Linsen", "Kokosmilch", "Zitrone", "Äpfel"];
+  function fridgeItem(text) {
+    var label = String(text || "").trim().replace(/\s+/g, " ").slice(0, 40), low = label.toLowerCase();
+    if (!low) return null;
+    var syn = FRIDGE_SYN[low], stem = low;
+    if (!syn) {
+      stem = low.replace(/(en|ern|n|e|s)$/, "");
+      if (stem.length < 4) stem = low;
+      syn = stem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+    var short = low.length < 4 && !FRIDGE_SYN[low];
+    var re = new RegExp(short ? "(^|[^a-zäöü])" + syn + "(n|en|er)?([^a-zäöü]|$)" : "(^|[^a-zäöü]|)(" + syn + ")");
+    if (FRIDGE_SYN[low] && /^(ei|eier)$/.test(low)) re = /(^|[^a-zäöü])(ei|eier|eigelb|eiweiss)([^a-zäöü]|$)/;
+    return { label: label, test: function (line) { return re.test(String(line).toLowerCase()); } };
+  }
+  function fridgeLines(r, basics) {
+    return (r.ingr || []).filter(function (l) {
+      if (isStaple(l)) return false;
+      var name = splitQty(l).name.toLowerCase();
+      if (/zum servieren|nach belieben|zum garnieren|optional|zum bestreuen/.test(name)) return false;
+      return !(basics && BASIC.test(name.split(",")[0]));
+    });
+  }
+  /* have: Zeilen, die der Kühlschrank deckt; missing: was noch fehlt; used: welche Zutaten aus dem Kühlschrank vorkommen. */
+  /* Frische Kräuter sind meist zum Garnieren: Sie fehlen nicht wirklich, sie stehen unter "soft". */
+  var HERBS = /^(glattblättrige |krause |frische |gehackte )?(petersilie|peterli|koriander|schnittlauch|basilikum|minze|dill|kerbel|thai-basilikum)/;
+  function fridgeMatch(r, items, basics) {
+    var lines = fridgeLines(r, basics !== false), have = [], missing = [], soft = [], used = [];
+    lines.forEach(function (l) {
+      var name = splitQty(l).name, hit = null;
+      for (var i = 0; i < items.length; i++) if (items[i].test(name)) { hit = items[i]; break; }
+      if (hit) { have.push(l); if (used.indexOf(hit.label) < 0) used.push(hit.label); }
+      else if (HERBS.test(name.toLowerCase())) soft.push(l);
+      else missing.push(l);
+    });
+    return { have: have, missing: missing, soft: soft, used: used, total: have.length + missing.length };
+  }
+  /* Rezepte, die möglichst viel vom Vorhandenen verwerten und möglichst wenig Einkauf brauchen. o: { basics, diet, cats, time } */
+  function fridgeSuggest(pool, texts, o) {
+    o = o || {};
+    var items = (texts || []).map(fridgeItem).filter(Boolean), out = [];
+    if (!items.length) return out;
+    var f = Object.assign(emptyFilter(), { diet: o.diet || [], cats: o.cats || [], time: o.time || 0 });
+    (pool || []).forEach(function (r) {
+      if (noteSummary(r).mood === "flop" || !recipeFits(r, f)) return;
+      var m = fridgeMatch(r, items, o.basics);
+      if (!m.used.length || !m.total) return;
+      var score = m.used.length * 3 + (m.have.length / m.total) * 4 - m.missing.length * 1.3 + liked(r) * 0.3;
+      out.push({ r: r, have: m.have, missing: m.missing, soft: m.soft, used: m.used, score: score, group: m.missing.length === 0 ? 0 : m.missing.length <= 2 ? 1 : 2 });
+    });
+    out.sort(function (a, b) { return a.group - b.group || b.score - a.score || a.r.title.localeCompare(b.r.title, "de"); });
+    return out;
+  }
+
   /* ---------- Menü-Finder ---------- */
   /* p: { time, regions, kitchens, coll, mains, diet, mood ("light" | "hearty"), spicy, guests, kids, fridge, cats }.
      Was nicht passt, fällt weg; der Rest bekommt Punkte: Zutaten aus dem Kühlschrank, Bewertungen und Ähnlichkeit mit
@@ -1073,7 +1159,8 @@ window.HP = (function () {
      h: { today, planned: [Rezept-Kennungen der nächsten Tage] }. Ergebnis mit Begründung. seed mischt Gleichstände. */
   function suggest(pool, p, h, seed) {
     p = p || {}; h = h || {};
-    var now = h.today || today(), words = searchWords(p.fridge), planned = h.planned || [];
+    var now = h.today || today(), planned = h.planned || [];
+    var items = String(p.fridge || "").split(/[,;\n]+/).map(fridgeItem).filter(Boolean);
     var loved = (pool || []).filter(function (r) { var s = noteSummary(r); return s.mood === "top" || r.fav; });
     var lovedK = {}, lovedM = {}, lovedC = {};
     loved.forEach(function (r) { var t = traits(r); if (r.kitchen) lovedK[r.kitchen] = 1; t.mains.forEach(function (m) { lovedM[m] = 1; }); (r.coll || []).forEach(function (c) { lovedC[c] = 1; }); });
@@ -1085,8 +1172,11 @@ window.HP = (function () {
       if (!recipeFits(r, f)) return;
       var t = traits(r), sc = 0, why = [];
       if (p.time) { if (r.time > p.time) return; if (!r.time) sc -= 2; else { sc += 1.5 * (1 - r.time / p.time); why.push(r.time + " Min."); } }
-      var m = recipeMatch(r, words);
-      if (words.length) { if (!m.score) sc -= 1; else { sc += m.score * 3; why.push("mit " + m.hits.join(", ")); } }
+      if (items.length) {
+        var fm = fridgeMatch(r, items, true);
+        if (!fm.used.length) sc -= 1;
+        else { sc += fm.used.length * 3 - fm.missing.length * 0.4; why.push("mit " + fm.used.join(", ")); }
+      }
       if (p.mood === "light") { if (t.light) { sc += 2; why.push("leicht"); } else if (t.hearty) sc -= 2; }
       if (p.mood === "hearty") { if (t.hearty) { sc += 2; why.push("deftig"); } else if (t.light) sc -= 1; }
       if (p.guests) { if (hasTag(r, "guests")) { sc += 2.5; why.push("für Gäste"); } }
@@ -1207,12 +1297,12 @@ window.HP = (function () {
      Wörtern des Schritts, über die ersten fünf Buchstaben: "Knoblauchzehen" passt zu "Knoblauch", "Zwiebeln" zu "Zwiebel". */
   function nounsOf(line) {
     var n = splitQty(line).name.replace(/\(.*?\)/g, " ").split(",")[0];
-    return n.split(/[\s/-]+/).filter(function (w) { return /^[A-ZÄÖÜ][a-zäöüßèéàâêç]{2,}/.test(w) || SHORT[w.toLowerCase()]; }).map(function (w) { return w.toLowerCase(); });
+    return n.replace(/['’]/g, "").split(/[\s/-]+/).filter(function (w) { return /^[A-ZÄÖÜ][a-zäöüßèéàâêç]{2,}/.test(w) || SHORT[w.toLowerCase()]; }).map(function (w) { return w.toLowerCase(); });
   }
   /* Zu kurz für den Vergleich über fünf Buchstaben: "Ei" passt zu "Ei", "Eier", "Spiegeleier", nie zu "ein"; "Öl" zu "Olivenöl". */
   var SHORT = { ei: /^(ei|eiern|[a-zäöü]*eier)$/, "öl": /öl$/ };
   function stepIngredients(step, lines) {
-    var all = String(step || "").toLowerCase().split(/[^a-zäöüßèéàâêç]+/), words = all.filter(function (w) { return w.length >= 4; });
+    var all = String(step || "").toLowerCase().replace(/['’]/g, "").split(/[^a-zäöüßèéàâêç]+/), words = all.filter(function (w) { return w.length >= 4; });
     var out = [];
     (lines || []).forEach(function (line, i) {
       var hit = nounsOf(line).some(function (n) {
@@ -1280,7 +1370,9 @@ window.HP = (function () {
       if (Array.isArray(a)) aisles[st.id] = a.filter(function (x) { return shopT.has(x); }).slice(0, 20);
     });
     return { id: id, name: text(d.name, 80).trim() || "Haushalt", base: d.base, rates: rates, members: members, created: num0(d.created),
-      store: storeOf(d.store) ? d.store : "", aisles: aisles, calV: intIn(d.calV, 0, 9999999, 0), gf: d.gf === true };
+      store: storeOf(d.store) ? d.store : "", aisles: aisles, calV: intIn(d.calV, 0, 9999999, 0), gf: d.gf === true,
+      fridge: (Array.isArray(d.fridge) ? d.fridge : []).filter(function (x) { return typeof x === "string" && x.trim(); }).map(function (x) { return x.trim().slice(0, 40); })
+        .filter(function (x, i, a) { return a.map(function (y) { return y.toLowerCase(); }).indexOf(x.toLowerCase()) === i; }).slice(0, 60) };
   }
   function normExpense(id, d) {
     if (!d || typeof d !== "object" || !posNum(d.amount) || typeof d.cur !== "string" || !/^[A-Z]{3}$/.test(d.cur)) return null;
@@ -1374,7 +1466,7 @@ window.HP = (function () {
     INFO_CATS: INFO_CATS, infoCat: infoT.get, okUrl: okUrl, dueOf: dueOf, normInfo: normInfo,
     glutenOf: glutenOf, GF_LABEL: GF_LABEL, MAINS: MAINS, main: mainT.get, traits: traits,
     DIETS: DIETS, METHODS: METHODS, TIMES: TIMES, SORTS: SORTS, emptyFilter: emptyFilter, filterCount: filterCount, recipeFits: recipeFits, filterRecipes: filterRecipes,
-    suggest: suggest, menuFor: menuFor,
+    suggest: suggest, menuFor: menuFor, FRIDGE_COMMON: FRIDGE_COMMON, fridgeItem: fridgeItem, fridgeMatch: fridgeMatch, fridgeSuggest: fridgeSuggest,
     MOODS: MOODS, mood: moodT.get, isMood: moodT.has, noteSummary: noteSummary, notesMap: notesMap,
     REGIONS: REGIONS, region: regT.get, KITCHENS: KITCHENS, kitchen: kitT.get, isKitchen: kitT.has, COLLECTIONS: COLLECTIONS, collection: collT.get, isCollection: collT.has,
     DISHES: DISHES, isDish: isDish, dishEmoji: dishEmoji, RECIPE_CATS: RECIPE_CATS, recipeCat: recT.get, RECIPE_TAGS: RECIPE_TAGS, recipeTag: tagT.get, hasTag: hasTag,

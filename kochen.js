@@ -88,6 +88,10 @@
     const [note, setNote] = useState("");
     const [tip, setTip] = useState(true);
     const tips = useMemo(() => HP.noteSummary(r).tips.slice(0, 3), [r]);
+    /* What this recipe used from the fridge list: offered at the end to take off it. */
+    const fridge = ctx.home.fridge || [];
+    const usedUp = useMemo(() => (fridge.length ? HP.fridgeMatch(r, fridge.map(HP.fridgeItem).filter(Boolean), true).used : []), [r, fridge]);
+    const [gone, setGone] = useState(() => new Set(usedUp));
     const alarm = useAlarm(), awake = useWakeLock();
     const touch = useRef(null), ref = useRef(null);
     const factor = serves / r.serves, lines = useMemo(() => r.ingr.map(l => HP.scaleLine(l, factor)), [r.ingr, factor]);
@@ -154,7 +158,7 @@
     const already = !r.idea && r.last === HP.today();
     const finish = async () => {
       const t = note.trim().slice(0, 500), withNote = !!(mood || t);
-      if (already && !withNote) { onClose(); return; }
+      if (already && !withNote && !gone.size) { onClose(); return; }
       setBusy(true);
       let id = r.id;
       if (r.idea) { id = await U.adoptRecipe(ctx, r); if (!id) { setBusy(false); return; } }
@@ -162,6 +166,7 @@
       if (!already) { patch.last = HP.today(); patch.n = (r.idea ? 0 : r.n || 0) + 1; }
       if (withNote) patch.notes = { ["n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)]: { by: ctx.meId || null, at: Date.now(), d: HP.today(), text: t, mood, tip: tip && !!t } };
       const ok = await ctx.act.patch("recipes", id, patch);
+      if (ok && gone.size) await ctx.act.patchHome(ctx.home.id, { fridge: fridge.filter(x => !gone.has(x)) });
       setBusy(false);
       if (ok) { ctx.say(tip && t ? "En Guete! 😋 Notiert, auch fürs nächste Mal." : "En Guete! 😋 «" + r.title + "» ist als gekocht notiert."); onClose(id); }
     };
@@ -227,10 +232,15 @@
                 <label class="label sub" for="hp-ck-note">Was machst du nächstes Mal anders? (optional)</label>
                 <textarea id="hp-ck-note" class="input area" rows="2" maxlength="500" placeholder="z. B. Mehr Glasur, Reis 2 Minuten länger" value=${note} onInput=${e => setNote(e.target.value)}></textarea>
                 ${note.trim() && html`<label class="check"><input type="checkbox" checked=${tip} onChange=${e => setTip(e.target.checked)} /><span>Beim nächsten Kochen hier anzeigen</span></label>`}
+                ${usedUp.length > 0 && html`
+                  <span class="label sub" id="hp-ck-gone">Aufgebraucht? Aus dem Kühlschrank nehmen</span>
+                  <div class="chips" role="group" aria-labelledby="hp-ck-gone">${usedUp.map(x => html`
+                    <button type="button" key=${x} class="chip mini" aria-pressed=${String(gone.has(x))} onClick=${() => { const n = new Set(gone); if (n.has(x)) n.delete(x); else n.add(x); setGone(n); }}>${gone.has(x) ? "✓ " : ""}${x}</button>`)}
+                  </div>`}
               </div>
               <p class="hint">${r.idea ? "Mit dem Speichern kommt das Rezept zu euren Rezepten." : "Als gekocht gemerkt schlägt der Würfel es ein paar Tage nicht vor."}</p>
               <div class="btn-row center">
-                <button type="button" class="btn primary" disabled=${busy || (already && !mood && !note.trim())} onClick=${finish}><span class="emo" aria-hidden="true">😋</span>${already ? "Notiz speichern" : "Als gekocht merken"}</button>
+                <button type="button" class="btn primary" disabled=${busy || (already && !mood && !note.trim() && !gone.size)} onClick=${finish}><span class="emo" aria-hidden="true">😋</span>${already ? "Notiz speichern" : "Als gekocht merken"}</button>
                 <button type="button" class="btn" onClick=${() => onClose()}>Schliessen</button>
               </div>
             </section>`}

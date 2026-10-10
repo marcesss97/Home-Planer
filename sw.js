@@ -1,9 +1,9 @@
 /* Home-Planer: Service Worker. Hält eine Kopie der App-Dateien bereit, damit der Home-Planer auch ohne Netz startet.
    Mit Netz fragt er bei jedem Start nach, ob es auf dem Server eine neuere Fassung gibt (so wirkt eine geänderte config.js sofort).
    Ohne Netz oder bei sehr langsamem Netz kommt die gespeicherte Kopie. Daten und Kurse laufen nicht über diese Kopie. */
-const CACHE = "homeplaner-v5";
+const CACHE = "homeplaner-v6";
 const FILES = [
-  "./", "index.html", "style.css", "config.js", "logic.js", "ideen.js", "buch-asien.js", "buch-europa.js", "buch-levante.js", "buch-schnell.js", "buch-morgen-apero-salat.js", "import.js", "store.js", "rates.js", "ui.js",
+  "./", "index.html", "style.css", "config.js", "logic.js", "ideen.js", "buch-asien.js", "buch-europa.js", "buch-levante.js", "buch-schnell.js", "buch-morgen-apero-salat.js", "buch-suppen-ofen.js", "buch-welt.js", "buch-fisch-favoriten.js", "buch-dessert-backen.js", "import.js", "store.js", "rates.js", "ui.js",
   "kasse.js", "einkauf.js", "ics.js", "kalender.js", "pflanzen.js", "infos.js", "rezepte.js", "kochen.js", "app.js",
   "vendor-preact.js", "vendor-qrcode.js", "vendor-firebase.js", "manifest.webmanifest", "favicon.svg",
   "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png",
