@@ -15,9 +15,11 @@ window.HPStore = (function () {
   /* Zustand der Datei config.js: "on" = Gruppen-Sync eingerichtet, "off" = bewusst leer gelassen,
      "incomplete" = Angaben fehlen oder sind noch Platzhalter, "broken" = die Datei liess sich nicht lesen (Tippfehler). */
   var configState = !RAW || typeof RAW !== "object" ? "broken" : cloudOn ? "on" : CFG ? "incomplete" : "off";
-  /* Kalender-Dienst für Abos in Outlook und im iPhone-Kalender (kalender-worker.js): nur eine schlichte https-Adresse. */
-  var CAL = RAW && typeof RAW === "object" && typeof RAW.calendar === "string" && /^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[A-Za-z0-9._~\/-]*)?$/.test(RAW.calendar.trim())
-    ? RAW.calendar.trim().replace(/\/+$/, "") : "";
+  /* Dienst für das Kalender-Abo und die Mitteilungen (dienst-worker.js): nur eine schlichte https-Adresse.
+     Früher hiess die Einstellung "calendar"; sie gilt weiter. */
+  var SVC_RAW = RAW && typeof RAW === "object" ? (typeof RAW.dienst === "string" && RAW.dienst.trim() ? RAW.dienst : RAW.calendar) : "";
+  var CAL = typeof SVC_RAW === "string" && /^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[A-Za-z0-9._~\/-]*)?$/.test(SVC_RAW.trim())
+    ? SVC_RAW.trim().replace(/\/+$/, "") : "";
 
   /* Die Bereiche eines Haushalts und wie ihre Einträge gelesen werden. */
   var COLS = ["expenses", "shopping", "events", "plants", "infos", "recipes"];
@@ -387,7 +389,7 @@ window.HPStore = (function () {
   }
 
   return {
-    calendarService: CAL, calendarToken: calendarToken, calendarUrl: calendarUrl,
+    service: CAL, calendarService: CAL, calendarToken: calendarToken, calendarUrl: calendarUrl,
     cloudOn: cloudOn, configState: configState, projectId: cloudOn ? String(CFG.projectId) : "",
     storageOk: storageOk, cloudDurable: cloudDurable, COLS: COLS, NORM: NORM,
     randomId: randomId, validId: validId, idFromLink: idFromLink, linkFor: linkFor,

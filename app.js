@@ -2,8 +2,9 @@
    settings and the line that says whether everything is saved. Stores through HPStore (this device or group sync). */
 (function () {
   "use strict";
-  var root = document.getElementById("app"), P = window.htmPreact, HP = window.HP, Store = window.HPStore, U = window.HPUI;
-  if (!P || !HP || !Store || !window.HPRates || !U || !U.Kasse || !U.Shopping || !U.Calendar || !U.Plants || !U.Infos || !U.Recipes || !U.CookMode || !window.HPImport || !window.HPIcs || !U.CalSync) {
+  var root = document.getElementById("app"), P = window.htmPreact, HP = window.HP, Store = window.HPStore, U = window.HPUI, Push = window.HPPush;
+  if (!P || !HP || !Store || !window.HPRates || !U || !U.Kasse || !U.Shopping || !U.Calendar || !U.Plants || !U.Infos || !U.Recipes || !U.CookMode || !window.HPImport || !window.HPIcs || !U.CalSync
+    || !window.HPRemind || !Push || !U.PushSheet) {
     var bs = document.getElementById("boot-status");
     if (bs) bs.textContent = "Der Home-Planer konnte nicht geladen werden. Prüf die Verbindung und lade die Seite neu.";
     return;
@@ -552,7 +553,7 @@
   }
 
   /* ---------- household settings ---------- */
-  function HomeEdit({ home, mode, cols, loading, meId, setMe, act, onClose, onDelete, onLeave, onPublish, onAvatar }) {
+  function HomeEdit({ home, mode, cols, loading, meId, setMe, act, onClose, onDelete, onLeave, onPublish, onAvatar, onPush }) {
     const all = membersOf(home, true), ms = all.filter(m => !m.gone);
     const list = cols.expenses || [];
     const [name, setName] = useState(home.name || "");
@@ -616,6 +617,12 @@
           <label class="check"><input id="hp-set-gf" type="checkbox" checked=${!!home.gf} onChange=${e => act.patchHome(home.id, { gf: e.target.checked })} /><span>Bei uns wird glutenfrei gekocht</span></label>
           <p class="hint">Dann zeigen Würfel und Menü-Finder zuerst glutenfreie Rezepte, jedes Rezept nennt den glutenfreien Ersatz (etwa Tamari statt Sojasauce), und auf der Einkaufsliste steht dabei «glutenfrei».</p>
         </div>
+        ${mode === "cloud" && html`
+          <div class="field">
+            <span class="label">Mitteilungen</span>
+            <p class="hint">${Push.info(home.id) ? "Auf diesem Gerät eingeschaltet." : "Abfuhr am Vorabend, wer heute kocht, Neues auf der Einkaufsliste, Fristen: aufs Handy, für jedes Gerät einzeln."}</p>
+            <div><button type="button" class="btn small" onClick=${onPush}><span class="emo" aria-hidden="true">🔔</span>Mitteilungen auf diesem Gerät</button></div>
+          </div>`}
         <div class="field">
           <label for="hp-set-base">Währung der Kasse</label>
           <${CurSelect} id="hp-set-base" value=${home.base} home=${home} label="Hauptwährung" disabled=${loading || list.length > 0} onChange=${c => { if (!loading && !list.length && c && c !== home.base) act.patchHome(home.id, { base: c }); }} />
@@ -761,6 +768,7 @@
             <button type="button" key=${m.id} role="radio" aria-checked="false" class="chip" onClick=${() => { setMe(m.id); setPick(false); open({ t: "avatar", m: m.id }); }}><${Av} m=${m} s=${1} />${m.name}</button>`)}
           </div>
         </section>`}
+      <${U.PushCard} ctx=${ctx} />
       ${lastMonth && html`
         <button type="button" class="book-coll month-card" onClick=${() => open({ t: "month", ym: lastMonth.ym, scope: "shop" })}>
           <span class="book-e" aria-hidden="true">🧾</span>
@@ -916,7 +924,7 @@
     const [sheet, setSheet] = useState(null);
     const [toast, setToast] = useState(null);
     const [meMap, setMeMap] = useState(() => ls.get("hp.me", {}));
-    const sheetRef = useRef(null), homeRef = useRef(null), leaving = useRef(false), pendingShare = useRef(null);
+    const sheetRef = useRef(null), homeRef = useRef(null), leaving = useRef(false), pendingShare = useRef(null), pushRef = useRef(null);
     sheetRef.current = sheet; homeRef.current = homeId;
     const say = useCallback((msg, kind) => setToast({ msg, kind: kind || "ok", k: Date.now() }), []);
     const refreshReg = useCallback(() => setReg(Store.registry.list()), []);
@@ -958,8 +966,10 @@
     }, [say, showHome]);
 
     useEffect(() => {
+      /* "#<household>" opens a household; "#<household>~shop" (from a notification) opens it on that tab. */
       const hashId = () => { try { return (location.hash || "").replace(/^#/, ""); } catch (e) { return ""; } };
-      const h = hashId(), sharing = h === "teilen";
+      const tabOf = x => { const t = String(x || "").split("~")[1]; return TABS.some(y => y[0] === t) ? t : null; };
+      const h0 = hashId(), h = h0.split("~")[0], wantTab = tabOf(h0), sharing = h === "teilen";
       let start = null;
       if (h && Store.validId(h)) start = h;
       else {
@@ -972,6 +982,7 @@
         const st = historyState(), kept = !!(st && st.hp === "home" && st.over && h === start);
         if (!kept) setUrl(null);
         if (!join(start, !kept)) setUrl(null);
+        else if (wantTab) setTab(wantTab);
       } else setUrl(null);
       const receive = () => takeShared().then(p => {
         if (!p) return;
@@ -984,21 +995,33 @@
       });
       if (sharing) receive();
       const onHash = () => {
-        const x = hashId();
+        const x0 = hashId(), x = x0.split("~")[0], t = tabOf(x0);
         if (x === "teilen") { if (homeRef.current) setUrl(homeRef.current); else setUrl(null); receive(); return; }
         if (leaving.current) { leaving.current = false; if (x) setUrl(null); return; }      // arrived beneath the household after "Haushalte"
-        if (x && Store.validId(x)) { if (x !== homeRef.current) join(x, false); return; }
+        if (x && Store.validId(x)) { if (x !== homeRef.current) join(x, false); if (t) { setUrl(x); setTab(t); } return; }
         if (sheetRef.current && homeRef.current) {                                         // "back" closes an open sheet first and stays in the household
           setUrl(homeRef.current, true); setSheet(null); return;
         }
         if (sheetRef.current) { setSheet(null); return; }                                  // the same on the start page
         setHomeId(null); setSheet(null); setTrouble(null); ls.set("hp.last", "");
       };
+      /* A tapped notification while the app is open: the service worker says which household and tab. */
+      const onMsg = e => {
+        const d = e && e.data;
+        if (!d || d.hp !== "open") return;
+        if (d.home && Store.validId(d.home) && d.home !== homeRef.current && !join(d.home, false)) return;
+        setSheet(null);
+        if (TABS.some(y => y[0] === d.tab)) setTab(d.tab);
+      };
+      try { if (navigator.serviceWorker) navigator.serviceWorker.addEventListener("message", onMsg); } catch (e) { /* no service worker, no notifications */ }
       const on = () => setOnline(true), off = () => setOnline(false);
       window.addEventListener("hashchange", onHash);
       window.addEventListener("online", on);
       window.addEventListener("offline", off);
-      return () => { window.removeEventListener("hashchange", onHash); window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+      return () => {
+        window.removeEventListener("hashchange", onHash); window.removeEventListener("online", on); window.removeEventListener("offline", off);
+        try { if (navigator.serviceWorker) navigator.serviceWorker.removeEventListener("message", onMsg); } catch (e) { /* see above */ }
+      };
     }, []);
 
     /* Live data of the open household. A first answer from the device copy can be empty although the server knows more: it is held
@@ -1113,8 +1136,23 @@
           const known = (h.rates || {})[cur];
           if (rate > 0 && (!known || Math.abs(known - rate) / rate > 0.01)) a.patchHome(h.id, { rates: { [cur]: rate } }).catch(() => {});
         },
-        save(col, body) { const b = clean(body), id = b.id; delete b.id; return ok(a.saveDoc(homeRef.current, col, id, b)); },
-        patch(col, id, patch) { return ok(a.patchDoc(homeRef.current, col, id, clean(patch))); },
+        /* A new entry is announced to the others (push.js decides whether and when). */
+        save(col, body) {
+          const b = clean(body), id = b.id, st = pushRef.current, known = st && st.cols[col];
+          delete b.id;
+          const isNew = !!(st && st.home && st.home.id === homeRef.current && Array.isArray(known) && !known.some(x => x.id === id));
+          const p = ok(a.saveDoc(homeRef.current, col, id, b));
+          if (isNew) p.then(done => { if (done) Push.changed(st.home, st.meId, st.mode, col, Store.NORM[col](id, b), true); });
+          return p;
+        },
+        patch(col, id, patch) {
+          const st = pushRef.current, p = ok(a.patchDoc(homeRef.current, col, id, clean(patch)));
+          /* An item bought a while ago that comes back onto the shopping list counts as new for the others (un-ticking a slip in the shop does not). */
+          const was = col === "shopping" && patch && patch.done === false && st && st.home && st.home.id === homeRef.current
+            && (st.cols.shopping || []).find(x => x.id === id && x.done && Date.now() - (x.doneAt || 0) > 3600000);
+          if (was) p.then(done => { if (done) Push.changed(st.home, st.meId, st.mode, col, Object.assign({}, was, patch), true); });
+          return p;
+        },
         remove(col, id) { return ok(a.removeDoc(homeRef.current, col, id)); },
         removeMany(col, ids) { const hid = homeRef.current; return ok(Promise.all(ids.map(id => a.removeDoc(hid, col, id)))); },
         removeHome(hid, refs) { return ok(a.removeHome(hid, refs)); }
@@ -1130,6 +1168,10 @@
       setMeMap(prev => { const next = Object.assign({}, prev, { [hid]: mid }); ls.set("hp.me", next); return next; });
     }, []);
     const setMe = useCallback(mid => { if (homeRef.current) rememberMe(homeRef.current, mid); }, [rememberMe]);
+    pushRef.current = { home, cols, meId, mode };
+    /* Notifications on this device stay registered (and follow a change of «Ich»). */
+    const pushHome = home && mode === "cloud" ? home : null;
+    useEffect(() => { if (pushHome) Push.resync(pushHome, meId); }, [pushHome && pushHome.id, meId]);
 
     const close = useCallback(() => {
       setSheet(null);
@@ -1216,6 +1258,8 @@
         else if (s.t === "aisles") sheetEl = html`<${U.AislesSheet} key=${s.k} ctx=${ctx} onClose=${close} />`;
         else if (s.t === "month") sheetEl = html`<${U.MonthSheet} key=${s.k} ctx=${ctx} ym=${s.ym} scope=${s.scope} onClose=${close} />`;
         else if (s.t === "calsync") sheetEl = html`<${U.CalSync} key=${s.k} ctx=${ctx} onClose=${close} />`;
+        else if (s.t === "push") sheetEl = html`<${U.PushSheet} key=${s.k} ctx=${ctx} setMe=${setMe} onClose=${s.back ? () => setSheet({ t: s.back, k: newId() }) : close}
+          onInstall=${() => setSheet({ t: "install", k: newId() })} />`;
         else if (s.t === "calimport") sheetEl = html`<${U.CalImport} key=${s.k} ctx=${ctx} onClose=${close} />`;
         else if (s.t === "event") sheetEl = html`<${U.EventForm} key=${s.k} ctx=${ctx} ev=${s.e ? findIn("events", s.e.id, s.e) : null} date=${s.date} at=${s.at} onClose=${close} />`;
         else if (s.t === "recipe") {
@@ -1257,7 +1301,8 @@
           }}
           onLeave=${() => { const hid = h.id; goList(); Store.registry.remove(hid); refreshReg(); say("Haushalt von diesem Gerät entfernt."); }}
           onPublish=${() => publish(h.id, h.name)}
-          onAvatar=${id => setSheet({ t: "avatar", m: id, back: "home-edit", k: newId() })} />`;
+          onAvatar=${id => setSheet({ t: "avatar", m: id, back: "home-edit", k: newId() })}
+          onPush=${() => setSheet({ t: "push", back: "home-edit", k: newId() })} />`;
       }
     }
     /* The page behind a sheet does not scroll. Bound to what is really shown: a sheet whose household has gone must not leave the page stuck. */

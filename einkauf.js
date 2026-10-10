@@ -85,7 +85,7 @@
   }
 
   function Shopping({ ctx }) {
-    const { data, act, open, say, who, home } = ctx;
+    const { data, act, open, say, who, home, mode, meId } = ctx;
     const list = data.shopping, store = home.store || "";
     const [busy, run] = useBusy();
     const [box, setBox] = useState(null);
@@ -103,6 +103,14 @@
     };
     const done = useMemo(() => (list || []).filter(it => it.done).sort((a, b) => b.doneAt - a.doneAt), [list]);
     const nOpen = (list || []).length - done.length;
+    /* «Ich gehe einkaufen»: die anderen bekommen eine Mitteilung und setzen noch schnell auf die Liste, was fehlt. */
+    const Push = window.HPPush, canGo = !!(Push && Push.canSend(home, mode));
+    const go = () => run(async () => {
+      try {
+        const r = await Push.going(home, meId, nOpen);
+        say(r && r.sent ? "Die anderen wissen Bescheid." : "Bei den anderen sind Mitteilungen noch nicht eingeschaltet.");
+      } catch (e) { say(e && e.code === "push-offline" ? "Der Dienst für Mitteilungen antwortet nicht. Prüf das Netz." : "Die Mitteilung liess sich nicht schicken.", "err"); }
+    });
     const clear = () => run(async () => {
       const ok = await act.removeMany("shopping", done.map(it => it.id));
       if (ok) say(done.length === 1 ? "Ein Artikel gelöscht." : done.length + " Artikel gelöscht.");
@@ -126,9 +134,10 @@
           <h2 class="aisle"><span class="emo" aria-hidden="true">${g.s.emoji}</span>${g.s.label}<span class="aisle-n">${g.items.length}</span></h2>
           <div class="list">${g.items.map(it => html`<${Row} key=${it.id} it=${it} ctx=${ctx} who=${who} />`)}</div>
         </section>`)}
-      ${nOpen > 0 && html`
+      ${(nOpen > 0 || (canGo && list)) && html`
         <div class="btn-row">
-          <button type="button" class="btn small" onClick=${share}><${Icon} n=${canShare ? "share" : "copy"} s=${16} />Liste ${canShare ? "teilen" : "kopieren"}</button>
+          ${canGo && html`<button type="button" class="btn small" disabled=${busy} onClick=${go}><${Icon} n="cart" s=${16} />Ich gehe einkaufen</button>`}
+          ${nOpen > 0 && html`<button type="button" class="btn small" onClick=${share}><${Icon} n=${canShare ? "share" : "copy"} s=${16} />Liste ${canShare ? "teilen" : "kopieren"}</button>`}
         </div>`}
       ${box && html`<div class="field"><label for="hp-shop-copy">Kopieren hat nicht geklappt. Markiere den Text und kopiere ihn von Hand.</label><textarea id="hp-shop-copy" class="copybox" readonly value=${box} onFocus=${e => e.target.select()}></textarea></div>`}
       ${done.length > 0 && html`

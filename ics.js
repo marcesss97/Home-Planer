@@ -1,7 +1,7 @@
 /* Home-Planer: Kalenderdateien im Format iCalendar (RFC 5545), das Outlook, der iPhone-Kalender und Google lesen.
    build() macht aus den Terminen eines Haushalts einen Kalender; parse() liest Termine aus einer .ics-Datei.
    Ohne Abhängigkeiten: Dieselbe Datei läuft im Browser (window.HPIcs) und, als Kopie, im Kalender-Dienst
-   kalender-worker.js. Wer hier etwas ändert, übernimmt es dort mit: node tests/kalender.test.js --update.
+   dienst-worker.js. Wer hier etwas ändert, übernimmt es dort mit: node tests/dienst.test.js --update.
    Alle Uhrzeiten des Home-Planers sind Schweizer Zeit (Europe/Zurich). */
 (function (root) {
   "use strict";

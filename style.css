@@ -809,3 +809,18 @@ details.raw .code { margin-top: 10px; max-height: 260px; overflow: auto; }
 .fr-have { color: var(--pos, var(--accent-hi)); font-weight: 600; }
 .fr-buy { justify-self: start; margin: -4px 12px 10px 64px; }
 .btn-row.tight { gap: 4px; flex-wrap: nowrap; }
+
+/* ---------- Mitteilungen ---------- */
+.push-kinds { display: grid; gap: 2px; }
+.push-kind { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.push-kind:last-child { border-bottom: 0; }
+.push-kind input { width: 20px; height: 20px; accent-color: var(--accent); }
+.push-kind .emo { font-size: 20px; }
+.push-kind .x-s { white-space: normal; }
+.push-on { display: flex; align-items: center; gap: 8px; font-weight: 600; margin: 0; }
+.push-warn { margin: 6px 0 0; padding: 10px 12px; border-radius: 14px; background: var(--neg-soft); font-size: 14.5px; }
+.push-next .x { min-height: 0; }
+.push-next .x-s { white-space: normal; }
+.push-card-in { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; }
+.push-card-in p { margin: 4px 0 10px; }
+.push-bell { font-size: 30px; line-height: 1; }

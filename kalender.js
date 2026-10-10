@@ -212,7 +212,7 @@
     Store.download(file, body, "text/calendar").then(r => { if (r !== "cancelled") ctx.say("Kalenderdatei bereit. Öffne sie mit Outlook oder dem Kalender."); }, () => ctx.say("Die Datei liess sich nicht speichern.", "err"));
   }
   const CAL_FAIL = {
-    "cal-offline": "Der Kalender-Dienst antwortet nicht. Prüf das Netz und die Adresse bei kalenderDienst in config.js.",
+    "cal-offline": "Der Kalender-Dienst antwortet nicht. Prüf das Netz und die Adresse bei dienst in config.js.",
     "cal-setup": "Der Kalender-Dienst ist noch nicht fertig eingerichtet: Bei Cloudflare fehlt das Secret KALENDER_SCHLUESSEL. Die Anleitung steht im README.",
     "cal-unknown": "Der Kalender-Dienst findet diesen Haushalt nicht. Er liest nur Haushalte aus dem Gruppen-Sync, im selben Firebase-Projekt wie in config.js.",
     "cal-firebase": "Der Kalender-Dienst kommt nicht an die Termine: Firebase lehnt ab. Sind die Regeln aus firestore.rules veröffentlicht?"

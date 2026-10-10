@@ -1,6 +1,6 @@
 # Home-Planer
 
-Euer Haushalt an einem Ort, als Web-App fürs Handy: gemeinsame Kasse, Einkaufsliste für Migros oder Coop, Rezeptbuch mit Kochmodus, Kalender mit Anschluss an Outlook und das iPhone, Giessplan für die Pflanzen und wichtige Infos wie Mietvertrag und Versicherungen. Die App läuft im Browser, lässt sich aufs Handy legen und startet auch ohne Netz. Gebaut auf der Grundlage der Ferienkasse ([Splite-weiser](https://github.com/marcesss97/Splite-weiser)): gleiches Aussehen, gleicher Gruppen-Sync, gleiche Bedienung.
+Euer Haushalt an einem Ort, als Web-App fürs Handy: gemeinsame Kasse, Einkaufsliste für Migros oder Coop, Rezeptbuch mit Kochmodus, Kalender mit Anschluss an Outlook und das iPhone, Giessplan für die Pflanzen, wichtige Infos wie Mietvertrag und Versicherungen und Mitteilungen aufs Handy. Die App läuft im Browser, lässt sich aufs Handy legen und startet auch ohne Netz. Gebaut auf der Grundlage der Ferienkasse ([Splite-weiser](https://github.com/marcesss97/Splite-weiser)): gleiches Aussehen, gleicher Gruppen-Sync, gleiche Bedienung.
 
 | Bereich | Was er kann |
 |---|---|
@@ -11,13 +11,14 @@ Euer Haushalt an einem Ort, als Web-App fürs Handy: gemeinsame Kasse, Einkaufsl
 | 📅 **Kalender** | Monatsansicht und «Demnächst». Termine über mehrere Tage, mit Uhrzeit, wiederkehrend (wöchentlich, alle 2 Wochen, monatlich, jährlich), einzelne Wiederholungen streichbar. Arten wie Abfuhr, Geburtstag, Besuch, Ferien. **In Outlook und im iPhone-Kalender** als Abo, das sich selbst aktualisiert, oder als Datei; Termine aus Outlook-Dateien übernehmen |
 | 🪴 **Pflanzen** | Jede Pflanze mit ihrem Rhythmus. Die durstigsten zuerst, ein Tipp auf 💧 notiert, wer heute gegossen hat. Düngen, Raum, Zuständigkeit und Verlauf |
 | 📁 **Infos** | Mietvertrag, Versicherungen, Abos, Kontakte, WLAN, Entsorgung: Vorlagen mit den üblichen Feldern, Kopieren mit einem Tipp, Telefonnummern zum Antippen, Links zu Dokumenten, Fristen mit Erinnerung in der Übersicht |
+| 🔔 **Mitteilungen** | Aufs Handy, auch wenn die App zu ist: Neues auf der Einkaufsliste, «Ich gehe einkaufen», Ausgaben mit dem eigenen Anteil, Abfuhr am Vorabend, wer heute kocht, Pflanzen, Geburtstage, Termine eine Stunde vorher, Fristen, Monatsabrechnung. Jedes Gerät wählt, was kommt, mit Ruhezeit in der Nacht |
 
 Dieses README führt zuerst durch drei Schritte und dient danach zum Nachschlagen.
 
 1. [Veröffentlichen auf GitHub](#1-veröffentlichen-auf-github): 3 Minuten.
 2. [Gruppen-Sync einschalten](#2-gruppen-sync-einschalten): 2 Minuten, wenn ihr das Firebase-Projekt der Ferienkasse mitbenutzt.
 3. [Probelauf](#3-probelauf): 5 Minuten zu zweit.
-4. [Kalender in Outlook und auf dem iPhone](#4-kalender-in-outlook-und-auf-dem-iphone): einmal 10 Minuten bei Cloudflare, freiwillig.
+4. [Dienst für Kalender und Mitteilungen](#4-dienst-für-kalender-und-mitteilungen): einmal 15 Minuten bei Cloudflare, freiwillig. Damit abonnieren Outlook und das iPhone den Kalender, und Mitteilungen kommen aufs Handy.
 
 Zum Nachschlagen: [Die Bereiche im Detail](#die-bereiche-im-detail) · [Wer sieht was?](#wer-sieht-was-sicherheit-und-daten) · [Sicherung](#sicherung) · [iPhone](#besonderheiten-auf-dem-iphone) · [Anpassen](#anpassen-und-aktualisieren) · [Tests](#tests) · [Was geprüft ist](#was-geprüft-ist-und-was-nicht) · [Lizenzen](#lizenzen)
 
@@ -69,20 +70,61 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 7. Auf der Einkaufsliste «Migros» oder «Coop» wählen: Die Abteilungen stehen in der Reihenfolge des Ladens.
 8. Eine Pflanze eintragen und auf 💧 tippen: Auf dem anderen Handy steht «Gegossen».
 9. Ein Handy in den Flugmodus, eine Ausgabe eintragen, Flugmodus aus: Die Ausgabe erscheint drüben.
-10. Probe-Haushalt wieder löschen: Regler-Symbol im Haushalt, «Haushalt für alle löschen».
+10. Mit dem Dienst aus Abschnitt 4: auf beiden Handys «Mitteilungen aufs Handy?», «Einrichten», einschalten und «Probe schicken». Dann setzt ein Handy «Brot» auf die Liste: Nach etwa zehn Sekunden meldet sich das andere.
+11. Probe-Haushalt wieder löschen: Regler-Symbol im Haushalt, «Haushalt für alle löschen».
 
-## 4. Kalender in Outlook und auf dem iPhone
+## 4. Dienst für Kalender und Mitteilungen
 
-Die Termine des Haushalts erscheinen in eurem eigenen Kalender, auf dem iPhone, in Outlook (privat oder bei der Arbeit) und in Google Kalender, und bleiben von selbst aktuell. Das läuft über ein **Kalender-Abo**: Der Kalender holt sich die Termine regelmässig über einen Link. Diesen Link liefert ein kleiner Kalender-Dienst, der einmal eingerichtet wird. Er läuft kostenlos bei Cloudflare (Tarif «Free», 100'000 Abrufe pro Tag) und braucht den Gruppen-Sync.
+Zwei Dinge kann eine Web-App allein nicht: einen Kalender liefern, den Outlook und das iPhone selbst abonnieren, und Mitteilungen aufs Handy schicken, wenn die App zu ist. Beides erledigt ein kleiner Dienst, der einmal eingerichtet wird. Er läuft kostenlos bei Cloudflare (Tarif «Free»: 100'000 Anfragen pro Tag, Zeitpläne und eine kleine Ablage inbegriffen, keine Kreditkarte) und braucht den Gruppen-Sync.
 
-1. Auf [dash.cloudflare.com](https://dash.cloudflare.com/sign-up) ein kostenloses Konto anlegen (E-Mail genügt, keine Kreditkarte).
-2. Links «Workers & Pages» (oder «Compute», «Workers»), «Create», «Start with Hello World». Als Namen etwa `home-planer-kalender`, dann «Deploy».
-3. «Edit code»: den ganzen Beispielcode löschen, den ganzen Inhalt der Datei [`kalender-worker.js`](kalender-worker.js) aus diesem Repository einfügen, «Deploy».
-4. Zurück beim Worker «Settings», «Variables and Secrets», «Add»: Typ «Secret», Name `KALENDER_SCHLUESSEL`, als Wert eine lange Zufallszeichenfolge (mindestens 32 Zeichen, etwa aus einem Passwort-Generator). Speichern beziehungsweise «Deploy». Den Wert braucht ihr danach nie mehr.
-5. Oben steht die Adresse des Dienstes, etwa `https://home-planer-kalender.marc.workers.dev`. Wer sie im Browser öffnet, sieht «Home-Planer Kalender-Dienst: bereit.»
-6. Auf GitHub die Datei `config.js` öffnen und die Adresse eintragen: `const kalenderDienst = "https://home-planer-kalender.marc.workers.dev";`, dann «Commit changes».
+1. Auf [dash.cloudflare.com](https://dash.cloudflare.com/sign-up) ein kostenloses Konto anlegen (E-Mail genügt).
+2. Links «Workers & Pages» (oder «Compute», «Workers»), «Create», «Start with Hello World». Als Namen etwa `home-planer-dienst`, dann «Deploy».
+3. «Edit code»: den ganzen Beispielcode löschen, den ganzen Inhalt der Datei [`dienst-worker.js`](dienst-worker.js) aus diesem Repository einfügen, «Deploy».
+4. Zurück beim Worker «Settings», «Variables and Secrets», «Add»: Typ «Secret», Name `DIENST_SCHLUESSEL`, als Wert eine lange Zufallszeichenfolge (mindestens 32 Zeichen, etwa aus einem Passwort-Generator). Speichern beziehungsweise «Deploy». Den Wert braucht ihr danach nie mehr; ändert ihn nicht, sonst müssen sich alle Handys für Mitteilungen neu anmelden.
+5. **Für Mitteilungen eine Ablage:** links «Storage & Databases», «Workers KV», «Create» und einen Namen wählen, etwa `home-planer`. Dann beim Worker «Settings», «Bindings», «Add», «KV namespace»: bei «Variable name» `HP` eintragen, den eben erstellten Namespace wählen, «Deploy».
+6. **Für Erinnerungen ein Zeitplan:** beim Worker «Settings», «Trigger Events», «Add», «Cron Triggers». Als Ausdruck `*/15 * * * *` (alle 15 Minuten), «Add» beziehungsweise «Deploy».
+7. Oben steht die Adresse des Dienstes, etwa `https://home-planer-dienst.marc.workers.dev`. Wer sie im Browser öffnet, sieht «Home-Planer Dienst: bereit. Kalender: ja. Mitteilungen: ja.»
+8. Auf GitHub die Datei `config.js` öffnen und die Adresse eintragen: `const dienst = "https://home-planer-dienst.marc.workers.dev";`, dann «Commit changes».
 
-Danach im Home-Planer: «Kalender», oben «Outlook & iPhone».
+Wer früher nur den Kalender-Dienst eingerichtet hat: Schritt 3 mit der neuen Datei wiederholen und die Schritte 5, 6 und 8 ergänzen. Das alte Secret `KALENDER_SCHLUESSEL` gilt weiter, die bisherigen Kalender-Links auch.
+
+### Mitteilungen aufs Handy
+
+Auf jedem Handy einzeln: den Haushalt öffnen, auf der Startseite bei «Mitteilungen aufs Handy?» auf «Einrichten» tippen (oder Regler-Symbol, «Mitteilungen auf diesem Gerät»). Wählen, wer man ist und was kommen soll, dann «Mitteilungen einschalten» und «Erlauben». «Probe schicken» zeigt sofort, ob es klappt.
+
+- **iPhone und iPad:** nur in der App vom Home-Bildschirm, ab iOS 16.4. In Safari geht es nicht; das ist eine Vorgabe von Apple.
+- **Android:** Chrome, Firefox oder Samsung Internet, im Browser und als installierte App. **Computer:** Chrome, Edge, Firefox und Safari.
+
+| Art | Wann | An wen |
+|---|---|---|
+| 🛒 Einkaufsliste | sobald jemand etwas einträgt (was kurz nacheinander kommt, als eine Mitteilung), und bei «Ich gehe einkaufen» | alle anderen |
+| 💰 Kasse | neue Ausgabe mit dem eigenen Anteil, Zahlung erhalten | wer betroffen ist |
+| 🧾 Monatsabrechnung | am 1. um 18 Uhr, wer wem wie viel überweist; am 8. nochmals, wenn noch etwas offen ist | wer zahlt oder bekommt |
+| 📅 Termine | neuer Termin; eine Stunde vor Terminen mit Uhrzeit; ganztägige um 7.30 Uhr | wer beim Termin eingetragen ist, sonst alle |
+| 🗑️ Abfuhr | am Vorabend um 19 Uhr | wer eingetragen ist, sonst alle |
+| 🎂 Geburtstage | drei Tage vorher um 18 Uhr und am Tag um 8 Uhr | alle |
+| 🍳 Kochen | um 15.30 Uhr, wenn man heute kocht; wenn jemand Essen in den Wochenplan setzt | wer kocht; alle anderen |
+| 🪴 Pflanzen | um 8 Uhr, was gegossen oder gedüngt werden muss | wer zuständig ist, sonst alle |
+| 📁 Fristen | 30, 7 und 1 Tag vor einer Frist aus den Infos und am Tag selbst, um 9 Uhr | alle |
+
+- Was man selbst einträgt, geht nur an die anderen. Die **Ruhezeit** (22 bis 7 Uhr, abschaltbar) hält nachts Mitteilungen über neue Einträge zurück; Erinnerungen an Termine mit Uhrzeit kommen trotzdem.
+- **«Ich gehe einkaufen»** auf der Einkaufsliste schickt den anderen sofort eine Mitteilung: Sie können noch schnell eintragen, was fehlt.
+- Ein Tipp auf eine Mitteilung öffnet den Haushalt im passenden Bereich.
+- Unter «Als Nächstes» zeigt das Fenster «Mitteilungen» die Erinnerungen der nächsten sieben Tage, unter «Im Haushalt», welche Geräte angemeldet sind und ob der Zeitplan läuft.
+
+| Meldung im Fenster «Mitteilungen» | Was zu tun ist |
+|---|---|
+| «Für Mitteilungen braucht der Home-Planer einmal einen kleinen Dienst» | Schritte 1 bis 8 oben; `dienst` in `config.js` ist noch leer |
+| «Im Dienst fehlt noch die Ablage» | Schritt 5: die KV-Bindung muss genau `HP` heissen |
+| «Erinnerungen brauchen noch den Zeitplan» | Schritt 6: der Cron Trigger fehlt. Neue Einträge melden sich trotzdem |
+| «Mitteilungen sind gesperrt» | Einmal «Nicht erlauben» getippt: in den Einstellungen des Browsers erlauben, auf dem iPhone unter Einstellungen › Mitteilungen › Home-Planer |
+| Probe kommt nicht an | Handy nicht im Fokus- oder Nicht-stören-Modus? Sonst Mitteilungen aus- und wieder einschalten |
+
+### Kalender in Outlook und auf dem iPhone
+
+Die Termine des Haushalts erscheinen in eurem eigenen Kalender, auf dem iPhone, in Outlook (privat oder bei der Arbeit) und in Google Kalender, und bleiben von selbst aktuell. Das läuft über ein **Kalender-Abo**: Der Kalender holt sich die Termine regelmässig über einen Link, den der Dienst liefert.
+
+Im Home-Planer: «Kalender», oben «Outlook & iPhone».
 
 - **iPhone:** «Im iPhone-Kalender abonnieren» antippen, dann «Abonnieren». Wie oft das iPhone nachschaut, steht unter Einstellungen › Kalender › Accounts › Abonnierte Kalender › «Abrufen».
 - **Outlook privat (outlook.com, Hotmail):** «In Outlook abonnieren (privat)». **Outlook bei der Arbeit (Microsoft 365):** «In Outlook abonnieren (Arbeit)». **Outlook auf dem Computer:** «Link kopieren», dann in Outlook «Kalender hinzufügen» › «Aus dem Internet» und einfügen. Outlook holt Änderungen alle paar Stunden; schneller lässt es sich nicht einstellen.
@@ -94,10 +136,10 @@ Das Abo geht in eine Richtung: vom Home-Planer in euren Kalender. Eintragen und 
 
 | Meldung im Fenster «Outlook & iPhone» | Was zu tun ist |
 |---|---|
-| «Der Kalender-Dienst antwortet nicht» | Adresse in `config.js` prüfen: genau so, wie Cloudflare sie zeigt, mit `https://` und ohne Schrägstrich am Schluss |
-| «… noch nicht fertig eingerichtet» | Schritt 4: das Secret `KALENDER_SCHLUESSEL` fehlt oder ist kürzer als 16 Zeichen |
-| «Firebase lehnt ab» | Sind die Regeln aus `firestore.rules` veröffentlicht? Ist der API-Schlüssel in der Google Cloud Console auf Websites beschränkt, darf er für den Dienst keine solche Beschränkung haben; sonst im Kalender-Dienst einen eigenen, unbeschränkten Schlüssel bei `FIREBASE_API_KEY` eintragen |
-| «… findet diesen Haushalt nicht» | Der Haushalt liegt nur auf dem Gerät («Einladen», «Für alle freigeben»), oder `kalender-worker.js` nennt ein anderes Firebase-Projekt als `config.js` |
+| «Der Kalender-Dienst antwortet nicht» | Adresse bei `dienst` in `config.js` prüfen: genau so, wie Cloudflare sie zeigt, mit `https://` und ohne Schrägstrich am Schluss |
+| «… noch nicht fertig eingerichtet» | Schritt 4: das Secret `DIENST_SCHLUESSEL` fehlt oder ist kürzer als 16 Zeichen |
+| «Firebase lehnt ab» | Sind die Regeln aus `firestore.rules` veröffentlicht? Ist der API-Schlüssel in der Google Cloud Console auf Websites beschränkt, darf er für den Dienst keine solche Beschränkung haben; sonst im Dienst einen eigenen, unbeschränkten Schlüssel bei `FIREBASE_API_KEY` eintragen |
+| «… findet diesen Haushalt nicht» | Der Haushalt liegt nur auf dem Gerät («Einladen», «Für alle freigeben»), oder `dienst-worker.js` nennt ein anderes Firebase-Projekt als `config.js` |
 
 ## Die Bereiche im Detail
 
@@ -149,7 +191,8 @@ Bild, Art und Merkmale (Vegi, Vegan, Schnell) errät die App aus Titel und Zutat
 - **Die Werte in `config.js` sind keine Passwörter.** Sie sagen dem Browser nur, welches Firebase-Projekt gemeint ist, und sind bei jeder Firebase-Web-App öffentlich. Geschützt werden die Daten durch die Regeln.
 - Links in Infos öffnet die App nur, wenn sie mit `https://` oder `http://` beginnen.
 - **Rezept aus einem Link:** Die Adresse des Rezepts geht an einen öffentlichen Lesedienst (der Reihe nach `api.allorigins.win`, `api.codetabs.com`, `r.jina.ai`), der die Seite holt und dem Browser zurückgibt. Mehr nicht: keine Haushaltsdaten, keine Kennung. Wer das nicht möchte, nimmt Screenshot oder Text.
-- **Kalender-Abo:** Der Link enthält nicht die Kennung des Haushalts, sondern eine mit `KALENDER_SCHLUESSEL` verschlüsselte Fassung. Wer ihn hat, sieht die Termine (Titel, Zeit, Notiz, wer betroffen ist), aber nicht Kasse, Infos oder den Rest des Haushalts. Der Link landet bei Apple, Microsoft oder Google, je nachdem, wo ihr ihn abonniert. «Link erneuern» macht alle bisherigen Links ungültig. Der Kalender-Dienst bei Cloudflare liest die Termine bei jedem Abruf aus Firestore und speichert nichts.
+- **Kalender-Abo:** Der Link enthält nicht die Kennung des Haushalts, sondern eine mit dem Secret des Dienstes verschlüsselte Fassung. Wer ihn hat, sieht die Termine (Titel, Zeit, Notiz, wer betroffen ist), aber nicht Kasse, Infos oder den Rest des Haushalts. Der Link landet bei Apple, Microsoft oder Google, je nachdem, wo ihr ihn abonniert. «Link erneuern» macht alle bisherigen Links ungültig. Der Dienst bei Cloudflare liest die Termine bei jedem Abruf aus Firestore und speichert sie nicht.
+- **Mitteilungen:** Der Text jeder Mitteilung ist Ende-zu-Ende verschlüsselt (Web Push nach RFC 8291): Apple, Google, Mozilla und Microsoft stellen sie zu, können sie aber nicht lesen. Der Dienst speichert in seiner eigenen Ablage nur, was ein Gerät zum Empfangen braucht: die Adresse beim Push-Dienst des Herstellers, die Schlüssel des Geräts, die Person und die gewählten Arten. Die Kennung des Haushalts liegt dort nur verschlüsselt. Ein Gerät, das sich 60 Tage nicht meldet, fällt von selbst heraus; «Ausschalten» meldet es sofort ab. Der Dienst schickt nur an die Push-Dienste der Hersteller, nie an andere Adressen. Was eine Mitteilung sagt, steht in `erinnerungen.js`.
 - **Rezept aus Screenshots:** Die Texterkennung läuft auf dem Gerät. Die Bilder verlassen es nicht und werden nicht gespeichert; gespeichert wird nur das Rezept, das ihr daraus macht.
 - Wo die Daten liegen: im Speicher des Browsers auf jedem Gerät und, mit Gruppen-Sync, in der Firestore-Datenbank am gewählten Standort. Programm, Schriften und Bibliotheken kommen aus diesem Repository, nicht von fremden Servern.
 - Ferienkasse und Home-Planer liegen unter derselben Adresse (`marcesss97.github.io`) und teilen sich im Browser einen Speicher. Sie kommen sich nicht in die Quere: Der Home-Planer schreibt nur Einträge, die mit `hp.` beginnen, und hat einen eigenen Zwischenspeicher für den Sync.
@@ -173,14 +216,14 @@ Bild, Art und Merkmale (Vegi, Vegan, Schnell) errät die App aus Titel und Zutat
 - Name und Farben: `manifest.webmanifest`, `index.html` und der Anfang von `style.css` (Farben als Variablen, hell und dunkel).
 - Kategorien der Kasse, Abteilungen und Stichwörter der Einkaufsliste, Arten von Terminen, Pflanzenbilder, Vorlagen der Infos, Bilder und Merkmale der Rezepte und Avatare: in `logic.js`.
 - Das Rezeptbuch: `ideen.js` und die Dateien `buch-*.js`. Ein eigenes Rezept ist ein weiterer Eintrag nach demselben Muster; `node tests/buch.test.js` prüft danach, ob alles stimmt (vegi und vegan, Timer, Abteilungen). Küchen und Sammlungen: `KITCHENS` und `COLLECTIONS` in `logic.js`.
-- Der Kalender-Dienst: Wer `ics.js` ändert, überträgt die Änderung mit `node tests/kalender.test.js --update` in `kalender-worker.js` und fügt die Datei danach bei Cloudflare nochmals ein (Schritt 3 in Abschnitt 4).
+- Der Dienst für Kalender und Mitteilungen enthält Kopien von `logic.js`, `ics.js` und `erinnerungen.js`. Wer eine davon ändert, überträgt die Änderung mit `node tests/dienst.test.js --update` in `dienst-worker.js` und fügt die Datei danach bei Cloudflare nochmals ein (Schritt 3 in Abschnitt 4). Uhrzeiten und Texte der Mitteilungen stehen in `erinnerungen.js`.
 - Die typische Reihenfolge der Abteilungen bei Migros und Coop und die Adressen der Onlineshops: `STORES` in `logic.js`.
 - Die Lesedienste für Rezept-Links: `READERS` in `import.js`.
 
 | Datei | Aufgabe |
 |---|---|
 | `index.html`, `style.css` | Seite und Aussehen |
-| `config.js` | Einstellungen dieser Installation (Gruppen-Sync, Kalender-Dienst) |
+| `config.js` | Einstellungen dieser Installation (Gruppen-Sync, Dienst für Kalender und Mitteilungen) |
 | `app.js` | Hülle: Liste der Haushalte, Übersicht, Navigation, Einladen, Einstellungen |
 | `ui.js` | Gemeinsame Bausteine der Oberfläche |
 | `kasse.js`, `einkauf.js`, `rezepte.js`, `kalender.js`, `pflanzen.js`, `infos.js` | Die sechs Bereiche |
@@ -188,11 +231,13 @@ Bild, Art und Merkmale (Vegi, Vegan, Schnell) errät die App aus Titel und Zutat
 | `import.js` | Rezepte aus Links, Screenshots und Text erkennen |
 | `ideen.js`, `buch-*.js` | Das Rezeptbuch |
 | `ics.js` | Kalenderdateien schreiben und lesen (für Outlook, iPhone, Google) |
-| `kalender-worker.js` | Der Kalender-Dienst für Cloudflare (läuft nicht in der App, siehe Abschnitt 4) |
+| `erinnerungen.js` | Mitteilungen: was sie sagen, wann Erinnerungen kommen, an wen |
+| `push.js`, `mitteilungen.js` | Mitteilungen auf dem Gerät: anmelden, Auswahl, neue Einträge melden; das Fenster «Mitteilungen» |
+| `dienst-worker.js` | Der Dienst für Kalender-Abo und Mitteilungen bei Cloudflare (läuft nicht in der App, siehe Abschnitt 4) |
 | `logic.js` | Rechnen und Prüfen: Aufteilen, Ausgleich, Statistik, Wiederholungen, Giessplan, Portionen umrechnen, Lesen gespeicherter Daten |
 | `store.js` | Speichern auf dem Gerät und im Gruppen-Sync |
 | `rates.js` | Tageskurse |
-| `sw.js`, `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png`, `favicon.svg` | Installierbare App, Start ohne Netz |
+| `sw.js`, `manifest.webmanifest`, `icon-*.png`, `badge-96.png`, `apple-touch-icon.png`, `favicon.svg` | Installierbare App, Start ohne Netz, Mitteilungen anzeigen |
 | `firestore.rules` | Sicherheitsregeln für die Firebase-Konsole (Home-Planer und Ferienkasse) |
 | `vendor-*.js`, `*.woff2` | Mitgelieferte Bibliotheken und Schriften, siehe `LICENSES.txt` |
 | `ocr/` | Texterkennung für Screenshots (Tesseract.js mit deutschem Sprachmodell); wird erst beim ersten Screenshot geladen |
@@ -203,7 +248,8 @@ Bild, Art und Merkmale (Vegi, Vegan, Schnell) errät die App aus Titel und Zutat
 ```sh
 node tests/logic.test.js          # Rechenlogik, ohne Browser
 node tests/import.test.js         # Rezepte erkennen, Timer finden, Reihenfolge der Läden, ohne Browser
-node tests/kalender.test.js       # Kalenderdateien und Kalender-Dienst, ohne Browser
+node tests/kalender.test.js       # Kalenderdateien und Kalender-Abo des Dienstes, ohne Browser
+node tests/dienst.test.js         # Mitteilungen und der Dienst: Erinnerungen, Verschlüsselung, Ablage, Zeitplan
 node tests/buch.test.js           # das Rezeptbuch: vollständig, vegi/vegan stimmig, Timer, Abteilungen
 npm install playwright            # einmalig, für den Browser-Test
 node tests/e2e.test.js            # die ganze App in Chromium, mit nachgebautem Sync-Server und zwei Handys
@@ -218,12 +264,14 @@ Geprüft, automatisch und wiederholbar:
 - Kalenderdateien: 300 Zufallstermine (Wiederholungen, gestrichene Tage, Monatsende, 29. Februar, Sommerzeit) als Kalender geschrieben und von einer unabhängigen Bibliothek (Python `icalendar` mit `recurring_ical_events`) wieder aufgelöst: Alle 5831 Termine stimmen mit dem Kalender der App überein. Dazu das Lesen einer Outlook-Datei mit Zeitzonen, Erinnerungen und Serien, und der Kalender-Dienst mit nachgebautem Firestore: Schlüssel, mehrere Seiten Termine, Auswahl der Arten, erneuerter Link, fremde und kaputte Schlüssel. Die Abfragen des Dienstes wurden gegen den echten Firestore-Server ausprobiert (lesend).
 - Glutenfrei, Hauptzutat, Zubereitung, Filter, Kühlschrank (Wortstämme, Oberbegriffe, kurze Wörter wie «Ei» nie in «Reis», Grundvorrat, Kräuter), Menü-Finder (harte Grenzen, Bewertungen, zuletzt Gekochtes, ganzes Menü) und Monatsabrechnung (Anteile, Ausgleich nur für diesen Monat, Einkäufe getrennt von allen Ausgaben, CSV) mit eigenen Testfällen.
 - Das Rezeptbuch: alle 455 Rezepte vollständig, eindeutig, mit Küche; als vegi oder vegan markierte Rezepte ohne Fleisch, Fisch, Fischsauce oder tierische Zutaten; Rezepte ab 25 Minuten mit Zeitangaben für die Timer; jede Zutat mit einer Abteilung auf der Einkaufsliste.
-- Die ganze App in Chromium in 34 Schritten: Haushalt anlegen, jeder Bereich mit seinen Formularen (bei den Rezepten: würfeln, Portionen, Einkaufsliste, übernehmen, einplanen, Kühlschrank-Suche; Rezept aus einem Link, aus Text und aus einem echten Bild mit der Texterkennung; Kochmodus mit Timer, Klingeln und Stoppen; Teilen an die App über den Service Worker; Einkaufsliste für Migros und Coop mit eigener Reihenfolge; Rezeptbuch mit Sammlung, Suche, zurück ins Buch, Notizen, Tipp und Bewertung im Kochmodus, «Nicht nochmals» fällt aus dem Würfel; Kalender als Datei, einzelner Termin, Outlook-Datei einlesen und nochmals einlesen; glutenfreier Haushalt mit Ersatz im Rezept, im Kochmodus und auf der Einkaufsliste; Rezeptsuche mit Filtern, Sortierung und zurück aus dem Rezept; Menü-Finder mit Begründung, weiterem Vorschlag und ganzem Menü; Kühlschrank mit «sofort kochbar», Fehlendem auf die Liste und «Aufgebraucht»; Monatsabrechnung mit Ausgleich und CSV), Neuladen, Zurück-Taste, Personen und Avatare, Sicherung herunterladen und einlesen, Löschen, schmale Handys mit 320 Pixeln. Der Gruppen-Sync mit einem nachgebauten Firestore-Server und zwei getrennten Handys: beitreten, Einträge (auch Rezepte) erscheinen gegenseitig, gleichzeitige Änderungen, für alle löschen, fehlende Regeln, fehlende Datenbank, einen Haushalt vom Gerät freigeben, Kalender-Abo mit Links für iPhone und Outlook und «Link erneuern», Notizen von zwei Handys gleichzeitig zum selben Rezept. Dazu ein Start mit der echten Firebase-Bibliothek ohne Netz.
+- Mitteilungen: jede Erinnerung zu ihrer Zeit und nur an die Betroffenen (Abfuhr, Geburtstage, Termine eine Stunde vorher, ganztägige, Kochen, Pflanzen, Fristen, Monatsabrechnung am 1. und 8.), Sommerzeit, die Texte bei neuen Einträgen mit dem Anteil jeder Person, Auswahl, Ruhezeit, nie an sich selbst, ausgetretene Personen. Der Dienst mit nachgebautem Firestore, nachgebauter Ablage und nachgebauten Push-Diensten: Die Verschlüsselung ergibt Byte für Byte das Beispiel aus RFC 8291, jede verschickte Mitteilung wird mit dem Schlüssel des Geräts wieder entschlüsselt, die Unterschrift (VAPID) wird geprüft; Anmelden mit allen Prüfungen, nur Push-Dienste der Hersteller, abgemeldete Geräte verschwinden, zu viele Mitteilungen werden abgewiesen, und der Zeitplan liest pro Viertelstunde nur, was fällig sein kann. Derselbe Dienst lief zusätzlich in der echten Cloudflare-Laufzeit (workerd) mit Ablage und Zeitplan.
+- Die ganze App in Chromium in 35 Schritten: Haushalt anlegen, jeder Bereich mit seinen Formularen (bei den Rezepten: würfeln, Portionen, Einkaufsliste, übernehmen, einplanen, Kühlschrank-Suche; Rezept aus einem Link, aus Text und aus einem echten Bild mit der Texterkennung; Kochmodus mit Timer, Klingeln und Stoppen; Teilen an die App über den Service Worker; Einkaufsliste für Migros und Coop mit eigener Reihenfolge; Rezeptbuch mit Sammlung, Suche, zurück ins Buch, Notizen, Tipp und Bewertung im Kochmodus, «Nicht nochmals» fällt aus dem Würfel; Kalender als Datei, einzelner Termin, Outlook-Datei einlesen und nochmals einlesen; glutenfreier Haushalt mit Ersatz im Rezept, im Kochmodus und auf der Einkaufsliste; Rezeptsuche mit Filtern, Sortierung und zurück aus dem Rezept; Menü-Finder mit Begründung, weiterem Vorschlag und ganzem Menü; Kühlschrank mit «sofort kochbar», Fehlendem auf die Liste und «Aufgebraucht»; Monatsabrechnung mit Ausgleich und CSV), Neuladen, Zurück-Taste, Personen und Avatare, Sicherung herunterladen und einlesen, Löschen, schmale Handys mit 320 Pixeln. Der Gruppen-Sync mit einem nachgebauten Firestore-Server und zwei getrennten Handys: beitreten, Einträge (auch Rezepte) erscheinen gegenseitig, gleichzeitige Änderungen, für alle löschen, fehlende Regeln, fehlende Datenbank, einen Haushalt vom Gerät freigeben, Kalender-Abo mit Links für iPhone und Outlook und «Link erneuern», Mitteilungen einschalten, Arten wählen, Probe, Ruhezeit, neue Einträge und «Ich gehe einkaufen» gehen an den Dienst, ein Tipp auf eine Mitteilung öffnet den richtigen Bereich, der Service Worker zeigt sie an, ausschalten; Notizen von zwei Handys gleichzeitig zum selben Rezept. Dazu ein Start mit der echten Firebase-Bibliothek ohne Netz.
 
 Nicht geprüft, weil es von hier aus nicht möglich war:
 
 - der Betrieb mit dem echten Firebase-Projekt und den Regeln aus `firestore.rules` (geprüft ist nur lesend, dass die Regeln veröffentlicht sind),
-- das echte Abo in Outlook und im iPhone-Kalender und der Kalender-Dienst bei Cloudflare selbst (geprüft sind die Kalenderdateien und der Dienst mit nachgebautem Firestore),
+- das echte Abo in Outlook und im iPhone-Kalender und der Dienst in einem Cloudflare-Konto (geprüft sind die Kalenderdateien und der Dienst mit nachgebautem Firestore, auch in der echten Cloudflare-Laufzeit),
+- echte Mitteilungen über die Push-Dienste von Apple und Google auf echten Handys (geprüft sind die Verschlüsselung nach dem Standard, die Unterschrift und das Anzeigen im Service Worker),
 - echte iPhones und Android-Handys (Installieren, Teilen-Menü, Aussehen der Emojis, Bildschirm-bleibt-an, Vorlesen, Vibrieren),
 - echte Rezeptseiten und die öffentlichen Lesedienste: Sie waren von hier aus nicht erreichbar, geprüft ist mit nachgebauten Seiten. Ändert eine Seite ihren Aufbau oder fällt ein Lesedienst weg, hilft der Weg über Screenshot oder Text,
 - die Texterkennung an echten Handy-Screenshots (geprüft mit einem in Chromium gezeichneten Rezeptbild),

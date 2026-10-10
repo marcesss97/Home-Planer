@@ -1,19 +1,11 @@
-/* Home-Planer: tests of the calendar files (ics.js) and the calendar service (kalender-worker.js), without a browser.
+/* Home-Planer: tests of the calendar files (ics.js) and of the calendar part of the service (dienst-worker.js), without a browser.
    Run:  node tests/kalender.test.js
-         node tests/kalender.test.js --update   copies ics.js into kalender-worker.js (after changing ics.js) */
+   After changing ics.js: node tests/dienst.test.js --update copies it into dienst-worker.js. */
 "use strict";
 const fs = require("fs"), path = require("path"), vm = require("vm"), assert = require("assert");
+const L = require("./dienst-laden.js");
 const ROOT = path.join(__dirname, "..");
 const ICS_SRC = fs.readFileSync(path.join(ROOT, "ics.js"), "utf8");
-const WORKER_FILE = path.join(ROOT, "kalender-worker.js");
-const BEGIN = "// ---- ics.js (Kopie, nicht hier ändern) ----\n", END = "// ---- Ende ics.js ----\n";
-let worker = fs.readFileSync(WORKER_FILE, "utf8");
-const embedded = () => worker.slice(worker.indexOf(BEGIN) + BEGIN.length, worker.indexOf(END));
-if (process.argv.includes("--update")) {
-  worker = worker.slice(0, worker.indexOf(BEGIN) + BEGIN.length) + ICS_SRC + worker.slice(worker.indexOf(END));
-  fs.writeFileSync(WORKER_FILE, worker);
-  console.log("kalender-worker.js: Kopie von ics.js aktualisiert.");
-}
 
 const sandbox = { window: {}, Intl, Math, Date, JSON, Number, String, Array, Object, RegExp, isFinite, isNaN, Float64Array, Int8Array, console };
 vm.createContext(sandbox);
@@ -32,9 +24,8 @@ const NOW = Date.UTC(2026, 9, 10, 12, 0);       // 10 October 2026, 14:00 in Zur
 const ev = (id, f) => Object.assign({ id, title: "Termin " + id, date: "2026-10-12", cat: "date", repeat: "none", who: [], note: "" }, f);
 
 /* ---------- writing ---------- */
-test("the copy of ics.js inside the calendar service is up to date", () => {
-  assert.ok(worker.indexOf(BEGIN) > 0 && worker.indexOf(END) > worker.indexOf(BEGIN), "markers in kalender-worker.js");
-  assert.strictEqual(embedded(), ICS_SRC, "run: node tests/kalender.test.js --update");
+test("the copy of ics.js inside the service is up to date", () => {
+  assert.ok(L.stale().indexOf("ics.js") < 0, "run: node tests/dienst.test.js --update");
 });
 test("kinds match the calendar of the app", () => {
   assert.deepStrictEqual(Array.from(Object.keys(I.KINDS)).sort(), Array.from(HP.EV_CATS.map(c => c.id)).sort());
@@ -134,15 +125,7 @@ test("reading nonsense gives nothing, not an error", () => {
 });
 
 /* ---------- the calendar service ---------- */
-function loadWorker() {
-  const src = worker.replace("export default { fetch: handle };", "globalThis.__worker = { fetch: handle };");
-  const box = { console, URL, Response, Request, Headers, TextEncoder, TextDecoder, crypto: globalThis.crypto, btoa, atob, Uint8Array, Date, Math, JSON, Object, Array, String, Number, RegExp, isFinite, Promise };
-  box.globalThis = box;
-  vm.createContext(box);
-  vm.runInContext(src, box, { filename: "kalender-worker.js" });
-  return box;
-}
-const W = loadWorker();
+const W = L.load();
 const HID = "h".repeat(10) + "AbCdEfGhIjKl";
 const fsv = v => typeof v === "string" ? { stringValue: v } : typeof v === "number" ? { integerValue: String(v) } : Array.isArray(v) ? { arrayValue: { values: v.map(fsv) } }
   : v && typeof v === "object" ? { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fsv(x)])) } } : { nullValue: null };
@@ -199,7 +182,7 @@ test("calendar service: renewed link, foreign or broken keys, unknown household"
 test("calendar service: not set up, preflight, health check", async () => {
   reset();
   const r = await call("GET", "/", null, {});
-  assert.strictEqual(r.status, 500); assert.match(await r.text(), /KALENDER_SCHLUESSEL/);
+  assert.strictEqual(r.status, 500); assert.match(await r.text(), /DIENST_SCHLUESSEL/);
   assert.strictEqual((await call("OPTIONS", "/token")).status, 204);
   assert.match(await (await call("GET", "/")).text(), /bereit/);
 });

@@ -1,5 +1,6 @@
 /* Home-Planer: the whole app in a real browser (Chromium through Playwright).
    Run:  node tests/e2e.test.js        (needs Playwright: npm install playwright, or PLAYWRIGHT=/path/to/playwright)
+         node tests/e2e.test.js "Gruppen-Sync"   starts at the first step with this name
    The script serves the app itself. The group sync runs against a stand-in for Firebase (tests/fake-firestore.js) whose
    data lives here in the script, so separate browser profiles act as separate phones of one household. */
 "use strict";
@@ -71,7 +72,7 @@ async function device({ cloud, width, dark, sw, calendar } = {}) {
   }
   await ctx.route(/^https:\/\//, r => r.abort());                     // no rates, no fonts from elsewhere: nothing may depend on it
   if (calendar) {                                                       // a calendar service: config.js names it, the test plays it
-    const cfg = fs.readFileSync(path.join(__dirname, "..", "config.js"), "utf8").replace('const kalenderDienst = "";', "const kalenderDienst = \"https://kal.test\";");
+    const cfg = fs.readFileSync(path.join(__dirname, "..", "config.js"), "utf8").replace('const dienst = "";', "const dienst = \"https://kal.test\";");
     await ctx.route("**/config.js", r => r.fulfill({ contentType: "application/javascript", body: cfg }));
     await ctx.route("https://kal.test/**", r => calendar(r));
   }
@@ -857,6 +858,110 @@ step("Gruppen-Sync: Kalender in Outlook und auf dem iPhone abonnieren, Link erne
   assert.deepStrictEqual(C3.errors, []);
   await C3.context().close();
 });
+step("Gruppen-Sync: Mitteilungen einschalten, wählen, Probe; neue Einträge und «Ich gehe einkaufen» gehen an die anderen; ein Tipp öffnet den Reiter", async () => {
+  const calls = [], subs = {};
+  const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" };
+  const svc = r => {                                                    // the service (dienst-worker.js), played here
+    const q = r.request(), u = new URL(q.url());
+    if (q.method() === "OPTIONS") return r.fulfill({ status: 204, headers: cors, body: "" });
+    const body = q.postData() ? JSON.parse(q.postData()) : null, ok = o => r.fulfill({ status: 200, contentType: "application/json", headers: cors, body: JSON.stringify(o) });
+    calls.push({ path: u.pathname, body });
+    if (u.pathname === "/push/key") return ok({ key: "B" + "A".repeat(86), store: true });
+    if (u.pathname === "/push/subscribe") { subs[body.sub.endpoint] = body; return ok({ ok: true }); }
+    if (u.pathname === "/push/unsubscribe") { delete subs[body.endpoint]; return ok({ ok: true }); }
+    if (u.pathname === "/push/test") return ok({ ok: true, status: 201 });
+    if (u.pathname === "/push/status") return ok({ devices: Object.values(subs).map(x => ({ member: x.member, dev: x.dev, prefs: x.prefs })), cron: Date.now() - 300000 });
+    if (u.pathname === "/push/send") return ok({ sent: Object.values(subs).filter(x => x.member !== body.from).length, devices: Object.keys(subs).length });
+    return r.fulfill({ status: 404, headers: cors, body: "" });
+  };
+  /* Headless Chromium refuses notifications and has no push service of a maker: permission and subscription are played in the page. */
+  const phone = async () => {
+    const P = await device({ cloud: true, sw: true, calendar: svc });
+    await P.context().addInitScript(() => {
+      let sub = null, perm = "default";
+      if (!window.PushManager || !window.Notification) return;
+      Object.defineProperty(Notification, "permission", { configurable: true, get: () => perm });
+      Notification.requestPermission = () => { perm = "granted"; return Promise.resolve(perm); };
+      PushManager.prototype.getSubscription = () => Promise.resolve(sub);
+      PushManager.prototype.subscribe = o => {
+        const key = new Uint8Array(o.applicationServerKey).buffer, endpoint = "https://fcm.googleapis.com/fcm/send/e2e-" + Math.random().toString(36).slice(2);
+        sub = { endpoint, options: { applicationServerKey: key }, toJSON: () => ({ endpoint, keys: { p256dh: "B" + "A".repeat(86), auth: "A".repeat(22) } }), unsubscribe: () => { sub = null; return Promise.resolve(true); } };
+        return Promise.resolve(sub);
+      };
+    });
+    return P;
+  };
+  const until = async (fn, what) => { for (let i = 0; i < 100; i++) { const v = fn(); if (v) return v; await new Promise(r => setTimeout(r, 100)); } throw new Error("waited in vain for " + what); };
+  const members = FS.db["homes/" + hid].members, idOf = n => Object.keys(members).find(k => members[k].name === n);
+  const P1 = await phone(), P2 = await phone();
+  await P1.goto(BASE + "#" + hid);
+  await sees(P1, "Mitteilungen aufs Handy?");
+  await P1.click(".push-card >> text=Einrichten");
+  await P1.click('.sheet .chip:has-text("Marc")');
+  await P1.click('.push-kind:has-text("Pflanzen") input');
+  await P1.click("text=Mitteilungen einschalten");
+  await toast(P1, /Mitteilungen sind eingeschaltet/);
+  await sees(P1, "Auf diesem Gerät eingeschaltet");
+  const s1 = calls.filter(c => c.path === "/push/subscribe").pop().body;
+  assert.deepStrictEqual([s1.home, s1.member, s1.quiet, s1.prefs.indexOf("plants"), s1.prefs.length, s1.dev], [hid, idOf("Marc"), true, -1, 8, "Computer"]);
+  assert.ok(s1.sub.endpoint.startsWith("https://fcm.googleapis.com/") && s1.sub.keys.auth.length === 22);
+  await until(() => FS.db["homes/" + hid].push > 0, "the household notes that someone has notifications on");
+  await sees(P1, "Angemeldet: Marc (Computer)");
+  await sees(P1, "Erinnerungen laufen");
+  await P1.click("text=Probe schicken");
+  await toast(P1, /Probe ist unterwegs/);
+  assert.strictEqual(calls.find(c => c.path === "/push/test").body.sub.endpoint, s1.sub.endpoint);
+  await P1.click('.check:has-text("Ruhezeit") input');
+  await until(() => calls.filter(c => c.path === "/push/subscribe").length === 2, "the new choice reaches the service");
+  assert.strictEqual(calls.filter(c => c.path === "/push/subscribe").pop().body.quiet, false);
+  await P1.click(".sheet-head >> text=Fertig"); await noSheet(P1);
+  assert.strictEqual(await P1.locator(".push-card").count(), 0, "the hint is gone once notifications are on");
+
+  /* Lea's phone: what she puts on the list goes to the others as one notification, and so does «Ich gehe einkaufen». */
+  await P2.goto(BASE + "#" + hid);
+  await P2.evaluate(([h, m]) => localStorage.setItem("hp.me", JSON.stringify({ [h]: m })), [hid, idOf("Lea")]);
+  await P2.reload();
+  await sees(P2, "WG Sync");
+  await tab(P2, "shop");
+  for (const t of ["Hafermilch", "Zitronen"]) { await P2.fill("#hp-shop-q", t); await P2.keyboard.press("Enter"); await P2.locator(".sh-t", { hasText: t }).waitFor(); }
+  await P2.evaluate(() => window.HPPush.flush());
+  const sent = await until(() => calls.find(c => c.path === "/push/send"), "a notification about the new items");
+  assert.deepStrictEqual([sent.body.home, sent.body.from, sent.body.msgs.length, sent.body.msgs[0].kind, sent.body.msgs[0].body],
+    [hid, idOf("Lea"), 1, "shop", "Lea hat Hafermilch und Zitronen eingetragen."]);
+  await P2.click("text=Ich gehe einkaufen");
+  await toast(P2, /Die anderen wissen Bescheid/);
+  const go = calls.filter(c => c.path === "/push/send").pop().body.msgs[0];
+  assert.deepStrictEqual([go.kind, go.title], ["shop", "🛒 Lea geht einkaufen"]);
+  assert.match(go.body, /\d+ Sachen stehen auf der Liste/);
+
+  /* A tapped notification: in an open app the service worker says where to go; otherwise the address does. */
+  await P1.evaluate(h => navigator.serviceWorker.dispatchEvent(new MessageEvent("message", { data: { hp: "open", home: h, tab: "cal" } })), hid);
+  await P1.locator('#hp-tab-cal[aria-selected="true"]').waitFor();
+  await P1.goto(BASE + "#" + hid + "~kasse");
+  await P1.locator('#hp-tab-kasse[aria-selected="true"]').waitFor();
+  assert.strictEqual(await P1.evaluate(() => location.hash), "#" + hid);
+
+  /* The service worker shows what arrives: title, text, tag, and where a tap leads. */
+  const sw = P1.context().serviceWorkers()[0] || await P1.context().waitForEvent("serviceworker");
+  const shown = await sw.evaluate(async h => {
+    const out = [];
+    self.registration.showNotification = (t, o) => { out.push([t, o.body, o.tag, o.data.home, o.data.tab, o.badge]); return Promise.resolve(); };
+    const fire = d => { try { self.dispatchEvent(new PushEvent("push", { data: d })); } catch (e) { /* a test event cannot wait; what counts is the call above */ } };
+    fire(JSON.stringify({ title: "🗑️ Morgen: Kehricht", body: "Heute Abend rausstellen.", tag: "trash-2026-10-13", tab: "cal", home: h }));
+    fire("kein JSON");
+    return out;
+  }, hid);
+  assert.deepStrictEqual(shown, [["🗑️ Morgen: Kehricht", "Heute Abend rausstellen.", "trash-2026-10-13", hid, "cal", "badge-96.png"], ["Home-Planer", "kein JSON", undefined, "", "", "badge-96.png"]]);
+
+  /* Switching off in the household settings signs this device off. */
+  await P1.click('[aria-label="Haushalt bearbeiten"]');
+  await P1.click("text=Mitteilungen auf diesem Gerät");
+  await P1.click(".sheet >> text=Ausschalten");
+  await toast(P1, /Mitteilungen sind auf diesem Gerät aus/);
+  assert.strictEqual(calls.filter(c => c.path === "/push/unsubscribe").pop().body.endpoint, s1.sub.endpoint);
+  assert.deepStrictEqual(P1.errors.concat(P2.errors), []);
+  await P1.context().close(); await P2.context().close();
+});
 step("Gruppen-Sync: Notizen zum selben Rezept von zwei Handys gleichzeitig", async () => {
   await tab(C1, "recipes");
   await C1.fill("#hp-rc-q", "Hummus");
@@ -948,11 +1053,13 @@ step("Gruppen-Sync: ein Haushalt vom Gerät wird freigegeben", async () => {
   const srv = await serve();
   BASE = "http://127.0.0.1:" + srv.address().port + "/";
   browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
-  let failed = null;
+  let failed = null, from = process.argv[2] || "";                    // node tests/e2e.test.js "Gruppen-Sync": start at the first step with this name
   for (const s of steps) {
+    if (from && s.name.indexOf(from) < 0) continue;
+    from = "";
     try { await s.fn(); passed++; console.log("✓ " + s.name); }
     catch (e) {
-      failed = s; console.error("✗ " + s.name + "\n  " + (e && e.stack || e).split("\n").slice(0, 4).join("\n  "));
+      failed = s; console.error("✗ " + s.name + "\n  " + (e && e.stack || e).split("\n").slice(0, process.env.E2E_LONG ? 40 : 4).join("\n  "));
       for (const p of FS.pages) { try { if (!p.isClosed()) await p.screenshot({ path: path.join(require("os").tmpdir(), "homeplaner-fail-" + FS.pages.size + ".png") }); } catch (x) { /* page gone */ } }
       break;
     }
