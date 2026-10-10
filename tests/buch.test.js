@@ -7,7 +7,7 @@ const fs = require("fs"), path = require("path"), vm = require("vm");
 const ROOT = path.join(__dirname, "..");
 const only = process.argv.slice(2).filter(a => /\.js$/.test(a) && a !== "ideen.js");
 const files = ["ideen.js"].concat(only.length ? only : fs.readdirSync(ROOT).filter(f => /^buch-[a-z0-9-]+\.js$/.test(f)).sort());
-const sandbox = { window: {}, Intl, Math, Date, JSON, Number, String, Array, Object, RegExp, isFinite, isNaN, Float64Array, Int8Array, console };
+const sandbox = { window: {}, Intl, Math, Date, JSON, Number, String, Array, Object, RegExp, isFinite, isNaN, Float64Array, Int8Array, console, WeakMap };
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(ROOT, "logic.js"), "utf8"), sandbox, { filename: "logic.js" });
 const errors = [], hints = [];
@@ -28,7 +28,7 @@ const STYLE_BAD = [[/ß/, "ß statt ss"], [/\bSahne\b/i, "Sahne statt Rahm"], [/
 const STYLE_HINT = [[/\bZucchini\b/, "Zucchini → Zucchetti"], [/Tomatenmark/, "Tomatenmark → Tomatenpüree"], [/Paprikaschote/, "Paprikaschote → Peperoni"], [/\bQuark\b.*Magerquark/, ""]];
 
 const ids = new Set(), titles = new Set();
-const perKitchen = {}, perColl = {}, unknownShop = {};
+const perKitchen = {}, perColl = {}, unknownShop = {}, gluten = { free: 0, swap: 0, contains: 0 };
 raw.forEach((x, i) => {
   const where = (x && x.id ? x.id : "#" + i) + " (" + (from[x && x.id] || "?") + ")";
   const err = m => errors.push(where + ": " + m), hint = m => hints.push(where + ": " + m);
@@ -71,6 +71,11 @@ raw.forEach((x, i) => {
     const name = HP.splitQty(l).name.replace(/\(.*?\)/g, " ").split(",")[0].trim();
     if (HP.shopGuess(name) === "other") unknownShop[name] = (unknownShop[name] || 0) + 1;
   });
+  if (r) {
+    const t = HP.traits(r);
+    gluten[t.gf.level]++;
+    if (["main", "soup", "salad"].indexOf(x.cat) >= 0 && !t.mains.length) hint("keine Hauptzutat erkannt (Filter «Hauptzutat» findet es nicht)");
+  }
   perKitchen[x.kitchen] = (perKitchen[x.kitchen] || 0) + 1;
   (x.coll || []).forEach(c => { perColl[c] = (perColl[c] || 0) + 1; });
 });
@@ -78,7 +83,7 @@ raw.forEach((x, i) => {
 const full = !process.argv.slice(2).some(a => /\.js$/.test(a));
 if (full) {
   HP.KITCHENS.forEach(k => { if ((perKitchen[k.id] || 0) < 2) errors.push("Küche " + k.label + ": nur " + (perKitchen[k.id] || 0) + " Rezepte"); });
-  if (raw.length < 120) errors.push("Das Rezeptbuch hat erst " + raw.length + " Rezepte");
+  if (raw.length < 250) errors.push("Das Rezeptbuch hat erst " + raw.length + " Rezepte");
   if ((perColl.glasiert || 0) < 10) errors.push("Sammlung «Glasiertes Poulet mit Reis»: erst " + (perColl.glasiert || 0));
   if ((perColl.ottolenghi || 0) < 10) errors.push("Sammlung «Im Stil von Ottolenghi»: erst " + (perColl.ottolenghi || 0));
   if (HP.ideas().length !== raw.length) errors.push("HP.ideas() liest " + HP.ideas().length + " von " + raw.length);
@@ -88,5 +93,5 @@ if (unk.length) hints.push("Zutaten ohne Abteilung auf der Einkaufsliste (" + un
 if (process.argv.includes("-v") || errors.length) hints.forEach(h => console.log("  · " + h));
 errors.forEach(e => console.error("✗ " + e));
 console.log((errors.length ? "✗ " + errors.length + " Fehler, " : "✓ ") + raw.length + " Rezepte geprüft (" + files.join(", ") + "), " + hints.length + " Hinweise" +
-  (full ? "\n  Küchen: " + HP.KITCHENS.map(k => k.id + " " + (perKitchen[k.id] || 0)).join(" · ") + "\n  Sammlungen: " + JSON.stringify(perColl) : ""));
+  (full ? "\n  Küchen: " + HP.KITCHENS.map(k => k.id + " " + (perKitchen[k.id] || 0)).join(" · ") + "\n  Sammlungen: " + JSON.stringify(perColl) + "\n  Glutenfrei: " + JSON.stringify(gluten) : ""));
 process.exit(errors.length ? 1 : 0);

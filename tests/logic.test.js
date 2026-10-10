@@ -1,7 +1,7 @@
 /* Home-Planer: tests of the arithmetic in logic.js, without a browser.  Run:  node tests/logic.test.js */
 "use strict";
 const fs = require("fs"), path = require("path"), vm = require("vm"), assert = require("assert");
-const sandbox = { window: {}, Intl, Math, Date, JSON, Number, String, Array, Object, isFinite, isNaN, Float64Array, Int8Array, console };
+const sandbox = { window: {}, Intl, Math, Date, JSON, Number, String, Array, Object, isFinite, isNaN, Float64Array, Int8Array, console, WeakMap };
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "logic.js"), "utf8"), sandbox);
 const HP = sandbox.window.HP;
@@ -240,6 +240,104 @@ test("cooking ideas: every idea is complete and valid", () => {
   });
   assert.ok(ideas.every(r => r.idea === true));
   assert.strictEqual(HP.idea("idee-roesti").title, "Rösti mit Spiegelei");
+});
+
+/* ---------- gluten-free, traits, filters, menu finder ---------- */
+const R = (title, ingr, steps, extra) => HP.normRecipe("r" + title.length, Object.assign({ title, ingr, steps: steps || ["Alles zusammen etwa 10 Minuten kochen."], tags: [] }, extra || {}));
+test("gluten-free: free, with a simple swap, or containing gluten", () => {
+  const free = R("Risotto", ["300 g Risottoreis", "1 l Gemüsebouillon", "50 g Parmesan", "400 g mehligkochende Kartoffeln", "2 EL Maizena", "200 g Reisnudeln"]);
+  const g1 = HP.glutenOf(free);
+  assert.strictEqual(g1.level, "free"); eq(g1.checks, ["Gemüsebouillon"]);
+  const swap = R("Teriyaki", ["600 g Pouletschenkel", "4 EL Sojasauce", "400 g Spaghetti", "2 EL Mehl", "60 g Paniermehl", "Fladenbrot zum Servieren", "Reis oder Naan zum Servieren"]);
+  const g2 = HP.glutenOf(swap);
+  assert.strictEqual(g2.level, "swap");
+  eq(g2.swaps.map(x => x.tip), ["Tamari (glutenfreie Sojasauce)", "glutenfreie Teigwaren", "Maizena oder glutenfreies Mehl", "glutenfreies Paniermehl", "glutenfreies Brot"]);
+  const dough = R("Zopf", ["500 g Zopfmehl", "1 Würfel Hefe"]);
+  assert.strictEqual(HP.glutenOf(dough).level, "contains");
+  assert.strictEqual(HP.glutenOf(R("Gerste", ["100 g Rollgerste", "1 Rüebli"])).level, "contains");
+  assert.strictEqual(HP.glutenOf(R("Gf", ["500 g Zopfmehl"], null, { tags: ["glutenfree"] })).level, "free", "marked by hand");
+  assert.ok(HP.hasTag(swap, "glutenfree") && !HP.hasTag(dough, "glutenfree"));
+});
+test("traits: main ingredient, cooking method, heat, dairy, hearty or light", () => {
+  const t1 = HP.traits(R("Curry", ["600 g Pouletbrust", "4 dl Kokosmilch", "2 EL rote Currypaste", "300 g Jasminreis"], ["Poulet in der Pfanne 8 Minuten braten."]));
+  eq(Array.from(t1.mains), ["poulet", "reis"]); eq(Array.from(t1.methods), ["pfanne"]); assert.ok(t1.spicy && t1.df);
+  const t2 = HP.traits(R("Flammkuchen", ["1 Flammkuchenteig", "200 g Speckwürfeli", "2 dl Sauerrahm"], ["Im Ofen bei 220 °C 12 Minuten backen."]));
+  eq(Array.from(t2.mains), ["schwein"]); assert.ok(t2.methods.indexOf("ofen") >= 0 && !t2.df && t2.hearty);
+  const t3 = HP.traits(R("Salat", ["4 Tomaten", "1 Gurke", "200 g Feta"], ["Alles schneiden und mischen."], { cat: "salad", tags: ["vegi"] }));
+  assert.ok(t3.methods.indexOf("roh") >= 0 && t3.mains.indexOf("kaese") >= 0 && t3.light);
+  const t4 = HP.traits(R("Hack", ["400 g Lammhackfleisch oder Rindshackfleisch", "1 TL scharfer Senf"]));
+  eq(Array.from(t4.mains), ["lamm"]); assert.ok(!t4.spicy, "mustard is not hot");
+  eq(Array.from(HP.traits(R("Mousse", ["4 Eier", "200 g Schokolade"], null, { cat: "sweet" })).mains), [], "no main ingredient for desserts");
+});
+test("filters: groups combine with and, choices within a group with or; sorting", () => {
+  const list = [R("Poulet schnell", ["500 g Pouletbrust", "2 EL Sojasauce"], null, { time: 20, kitchen: "cn" }),
+    R("Fisch langsam", ["4 Lachsfilets"], null, { time: 50, kitchen: "nord" }),
+    R("Linsen", ["300 g Linsen", "1 Zwiebel"], null, { time: 35, kitchen: "in", tags: ["vegan"] }),
+    R("Kuchen", ["300 g Weissmehl", "200 g Zucker"], null, { time: 60, cat: "sweet", kitchen: "ch" })];
+  const f = o => HP.filterRecipes(list, Object.assign(HP.emptyFilter(), o)).map(x => x.r.title);
+  eq(f({ mains: ["poulet", "fisch"] }), ["Fisch langsam", "Poulet schnell"]);
+  eq(f({ mains: ["poulet", "fisch"], time: 30 }), ["Poulet schnell"]);
+  eq(f({ diet: ["gf"] }), ["Fisch langsam", "Linsen", "Poulet schnell"]);
+  eq(f({ diet: ["gfstrict"] }), ["Fisch langsam", "Linsen"]);
+  eq(f({ diet: ["vegi"] }), ["Kuchen", "Linsen"].filter(t => t !== "Kuchen"));
+  eq(f({ regions: ["asien"] }), ["Linsen", "Poulet schnell"]);
+  eq(f({ kitchens: ["in"], regions: ["europa"] }), ["Linsen"], "a kitchen narrows its region");
+  eq(f({ sort: "time" }), ["Poulet schnell", "Linsen", "Fisch langsam", "Kuchen"]);
+  eq(f({ q: "linsen zwiebel" }), ["Linsen"]);
+  assert.strictEqual(HP.filterCount(Object.assign(HP.emptyFilter(), { diet: ["gf", "vegi"], time: 30, coll: "glasiert" })), 4);
+});
+test("menu finder: hard limits, history, ratings, and a whole menu", () => {
+  const day = "2026-10-10";
+  const a = R("Teriyaki-Poulet", ["600 g Pouletschenkel", "4 EL Sojasauce", "300 g Reis"], null, { time: 30, kitchen: "jp", coll: ["glasiert"] });
+  const b = R("Chicken Adobo", ["800 g Pouletschenkel", "1 dl Essig", "300 g Reis"], null, { time: 60, kitchen: "sea", coll: ["glasiert"] });
+  const c = R("Butter Chicken", ["600 g Pouletbrust", "2 dl Rahm", "50 g Butter", "300 g Basmatireis"], null, { time: 45, kitchen: "in" });
+  const d = R("Linsensuppe", ["300 g rote Linsen", "1 Zwiebel"], null, { time: 30, cat: "soup", kitchen: "levante", tags: ["vegan"] });
+  const e = R("Mangocreme", ["2 Mangos", "2 dl Kokosmilch"], null, { time: 15, cat: "sweet", kitchen: "th", tags: ["vegan"] });
+  const pool = [a, b, c, d, e];
+  const s = p => HP.suggest(pool, p, { today: day }, "t").map(x => x.r.title);
+  eq(s({ time: 45 }).sort(), ["Butter Chicken", "Teriyaki-Poulet"]);
+  assert.strictEqual(s({ mains: ["poulet"], fridge: "rahm" })[0], "Butter Chicken", "what is in the fridge counts");
+  const rated = Object.assign({}, b, { notes: [{ id: "n1", mood: "top", text: "", tip: false, by: null, at: 1, d: day }] });
+  assert.strictEqual(HP.suggest([a, rated, c], {}, { today: day }, "t")[0].r.title, "Chicken Adobo", "what you loved comes first");
+  const flop = Object.assign({}, a, { notes: [{ id: "n2", mood: "flop", text: "", tip: false, by: null, at: 1, d: day }] });
+  assert.ok(HP.suggest([flop, b], {}, { today: day }, "t").every(x => x.r !== flop), "«Nicht nochmals» never comes back");
+  const cooked = Object.assign({}, a, { last: "2026-10-08" });
+  assert.strictEqual(HP.suggest([cooked, b], {}, { today: day }, "t")[0].r.title, "Chicken Adobo", "cooked two days ago goes back");
+  assert.strictEqual(HP.suggest([a, b], {}, { today: day, planned: [a.id] }, "t")[0].r.title, "Chicken Adobo", "planned already goes back");
+  const m = HP.menuFor(pool, c, {}, { today: day }, "t");
+  assert.strictEqual(m.starter.title, "Linsensuppe"); assert.strictEqual(m.dessert.title, "Mangocreme");
+});
+
+/* ---------- monthly statement ---------- */
+test("monthly statement: purchases of one month, shares, payments that settle only this month", () => {
+  const home = HP.normHome("h".repeat(22), { name: "WG", base: "CHF", members: { a: { name: "Anna", o: 0 }, b: { name: "Ben", o: 1 } } });
+  const ex = [
+    { id: "e1", kind: "expense", title: "Coop", amount: 10000, cur: "CHF", payer: "a", cat: "groceries", date: "2026-09-03", mode: "equal", for: ["a", "b"] },
+    { id: "e2", kind: "expense", title: "Putzmittel", amount: 2000, cur: "CHF", payer: "b", cat: "household", date: "2026-09-20", mode: "equal", for: ["a", "b"] },
+    { id: "e3", kind: "expense", title: "Kino", amount: 3000, cur: "CHF", payer: "b", cat: "outing", date: "2026-09-21", mode: "equal", for: ["a", "b"] },
+    { id: "e4", kind: "expense", title: "Migros", amount: 5000, cur: "CHF", payer: "b", cat: "groceries", date: "2026-08-30", mode: "equal", for: ["a", "b"] }
+  ].map(e => HP.normExpense(e.id, e));
+  const shop = HP.monthReport(home, ex, "2026-09", "shop");
+  assert.strictEqual(shop.total, 12000); assert.strictEqual(shop.count, 2); assert.strictEqual(shop.prev, 5000);
+  eq(shop.plan.payments, [{ from: "b", to: "a", amount: 4000 }]);
+  eq(shop.cats.map(c => [c.cat, c.total]), [["groceries", 10000], ["household", 2000]]);
+  const all = HP.monthReport(home, ex, "2026-09", "all");
+  assert.strictEqual(all.total, 15000); eq(all.plan.payments, [{ from: "b", to: "a", amount: 2500 }]);
+  const paid = ex.concat([HP.normExpense("t1", { kind: "transfer", amount: 4000, cur: "CHF", payer: "b", to: "a", date: "2026-10-02", settles: "2026-09:shop" })]);
+  const after = HP.monthReport(home, paid, "2026-09", "shop");
+  assert.ok(after.settled && !after.open, "September is settled for the purchases");
+  assert.strictEqual(HP.monthReport(home, paid, "2026-09", "all").open, 1, "the other view still has its own statement");
+  assert.strictEqual(HP.normExpense("t2", { kind: "transfer", amount: 1, cur: "CHF", payer: "a", to: "b", settles: "bad" }).settles, "");
+  const name = id => ({ a: "Anna", b: "Ben" })[id];
+  const csv = HP.monthCsv(home, shop, name);
+  assert.ok(csv.charCodeAt(0) === 0xfeff && csv.indexOf("Datum;Titel;Kategorie;Bezahlt von;Betrag;Währung;Betrag CHF;Anteil Anna;Anteil Ben") > 0);
+  assert.ok(csv.indexOf("2026-09-20;Putzmittel;Haushalt;Ben;20.00;CHF;20.00;10.00;10.00") > 0, csv);
+  assert.match(HP.monthText(home, shop, name), /Ben → Anna: CHF/);
+});
+test("recipe notes survive a backup (list form) and go back to the table form", () => {
+  const r = HP.normRecipe("r1", { title: "X", notes: [{ id: "n1", text: "gut", mood: "top", at: 5 }, { id: "bad id", text: "x" }] });
+  eq(r.notes.map(n => n.id), ["n1"]);
+  eq(Object.keys(HP.notesMap(r.notes)), ["n1"]);
 });
 
 console.log((failed ? "✗ " + failed + " failed, " : "✓ ") + n + " passed");

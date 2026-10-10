@@ -26,8 +26,9 @@
   }
   const cookedText = r => (r.last ? "zuletzt gekocht " + HP.relDays(HP.dayDiff(HP.today(), r.last)) : "");
   /* The idea of the day: the same all day long, on every device of the household. */
+  const DINNER = ["main", "soup", "salad"];
   function dailyIdea(ctx, list) {
-    const pool = list || poolOf(ctx.data.recipes || []);
+    const pool = list || poolOf(ctx.data.recipes || []).filter(r => DINNER.indexOf(r.cat) >= 0 && HP.noteSummary(r).mood !== "flop" && (!ctx.home.gf || HP.hasTag(r, "glutenfree")));
     if (!pool.length) return null;
     const fresh = pool.filter(r => !r.last || HP.dayDiff(r.last, HP.today()) > 4), from = fresh.length ? fresh : pool;
     return from[HP.hash(HP.today() + "|" + ctx.home.id) % from.length];
@@ -39,11 +40,14 @@
     const { act, data, meId, say } = ctx;
     let added = 0, had = 0;
     const list = (data.shopping || []).slice();
+    /* Kocht der Haushalt glutenfrei, steht beim Ersatz dabei, was zu kaufen ist (etwa «glutenfrei: Tamari»). */
+    const gfTip = {};
+    if (ctx.home.gf) HP.glutenOf({ ingr: lines, tags: [] }).swaps.forEach(x => { gfTip[x.line] = x.tip; });
     const items = [];
     lines.forEach(line => {
-      const p = HP.splitQty(line), parts = p.name.split(/\s*,\s*/).filter(Boolean);
-      if (parts.length > 1 && parts.slice(1).every(x => /^[A-ZÄÖÜ]/.test(x))) parts.forEach((x, i) => items.push({ name: x, qty: i ? "" : p.qty, rest: "" }));
-      else items.push({ name: parts[0] || "", qty: p.qty, rest: parts.slice(1).join(", ") });
+      const p = HP.splitQty(line), parts = p.name.split(/\s*,\s*/).filter(Boolean), gf = gfTip[line] ? "glutenfrei: " + gfTip[line] : "";
+      if (parts.length > 1 && parts.slice(1).every(x => /^[A-ZÄÖÜ]/.test(x))) parts.forEach((x, i) => items.push({ name: x, qty: i ? "" : p.qty, rest: gf }));
+      else items.push({ name: parts[0] || "", qty: p.qty, rest: [gf, parts.slice(1).join(", ")].filter(Boolean).join(" · ") });
     });
     for (const p of items) {
       const name = p.name.trim(), rest = p.rest;
@@ -73,15 +77,15 @@
   }
 
   /* ---------- the idea of the moment ---------- */
-  const FILTERS = [["vegi", "Vegi"], ["quick", "Schnell"], ["cheap", "Günstig"]];
+  const FILTERS = [["vegi", "Vegi"], ["glutenfree", "Glutenfrei"], ["quick", "Schnell"], ["cheap", "Günstig"]];
   const notFlop = r => HP.noteSummary(r).mood !== "flop";
   function IdeaCard({ ctx }) {
     const own = ctx.data.recipes || [];
-    const [tags, setTags] = useState([]);
+    const [tags, setTags] = useState(() => (ctx.home.gf ? ["glutenfree"] : []));
     const [mine, setMine] = useState(false);
     const [cur, setCur] = useState(null);
     const [region, setRegion] = useState("");
-    const list = useMemo(() => poolOf(own).filter(r => (!mine || !r.idea) && notFlop(r) && tags.every(t => HP.hasTag(r, t)) && (!region || (r.kitchen && HP.kitchen(r.kitchen).region === region))), [own, tags, mine, region]);
+    const list = useMemo(() => poolOf(own).filter(r => (!mine || !r.idea) && notFlop(r) && DINNER.indexOf(r.cat) >= 0 && tags.every(t => HP.hasTag(r, t)) && (!region || (r.kitchen && HP.kitchen(r.kitchen).region === region))), [own, tags, mine, region]);
     const r = (cur && list.find(x => x.id === cur)) || dailyIdea(ctx, list);
     const dice = () => {
       const others = list.filter(x => x !== r && (!x.last || HP.dayDiff(x.last, HP.today()) > 4));
@@ -179,12 +183,20 @@
         </div>
         <p>Link von Fooby, Migusto, Betty Bossi, Swissmilk oder Chefkoch einfügen, einen Screenshot wählen oder Text einfügen: Daraus entstehen Rezept, Einkaufsliste und Kochmodus.</p>
       </section>
+      <button type="button" class="book-coll finder-card" onClick=${() => ctx.open({ t: "finder" })}>
+        <span class="book-e" aria-hidden="true">🔮</span>
+        <span class="x-main"><span class="x-t">Menü-Finder</span><span class="x-s">Zeit, Lust, Zutaten: Was passt heute?</span></span>
+        <${Icon} n="next" s=${18} />
+      </button>
       <${IdeaCard} ctx=${ctx} />
       <${WeekPlan} ctx=${ctx} />
-      <div class="search">
-        <${Icon} n="search" s=${18} />
-        <label class="sr" for="hp-rc-q">Rezepte durchsuchen</label>
-        <input id="hp-rc-q" class="input" type="search" autocomplete="off" placeholder="Was ist da? z. B. Zucchetti, Feta" value=${q} onInput=${e => setQ(e.target.value)} />
+      <div class="find-row">
+        <div class="search">
+          <${Icon} n="search" s=${18} />
+          <label class="sr" for="hp-rc-q">Rezepte durchsuchen</label>
+          <input id="hp-rc-q" class="input" type="search" autocomplete="off" placeholder="Was ist da? z. B. Zucchetti, Feta" value=${q} onInput=${e => setQ(e.target.value)} />
+        </div>
+        <button type="button" class="btn" onClick=${() => ctx.open({ t: "book", f: startFilter(ctx, { q }), open: true })}><${Icon} n="sliders" s=${18} />Filter</button>
       </div>
       ${words.length > 0 && html`
         <section class="stack">
@@ -205,87 +217,246 @@
       ${!words.length && html`<${BookTeaser} ctx=${ctx} />`}`;
   }
 
-  /* ---------- the recipe book ---------- */
+  /* ---------- the recipe book: search, filters, sort ---------- */
+  const tog = (list, id) => (list.indexOf(id) >= 0 ? list.filter(x => x !== id) : list.concat(id));
+  function startFilter(ctx, preset) {
+    const f = Object.assign(HP.emptyFilter(), preset || {});
+    if (!preset || preset.diet === undefined) f.diet = ctx.home.gf ? ["gf"] : [];
+    return f;
+  }
   function BookTeaser({ ctx }) {
     const all = HP.ideas();
     if (!all.length) return null;
     const inColl = id => all.filter(r => r.coll.indexOf(id) >= 0).length, inRegion = id => all.filter(r => r.kitchen && HP.kitchen(r.kitchen).region === id).length;
+    const book = preset => ctx.open({ t: "book", f: startFilter(ctx, preset) });
     return html`
       <section class="stack book" id="hp-book">
         <h2 class="aisle"><span class="emo" aria-hidden="true">📖</span>Rezeptbuch<span class="aisle-n">${all.length} Rezepte</span></h2>
         <div class="book-colls">${HP.COLLECTIONS.map(c => html`
-          <button type="button" key=${c.id} class="book-coll" onClick=${() => ctx.open({ t: "book", coll: c.id })}>
+          <button type="button" key=${c.id} class="book-coll" onClick=${() => book({ coll: c.id })}>
             <span class="book-e" aria-hidden="true">${c.emoji}</span>
             <span class="x-main"><span class="x-t">${c.label}</span><span class="x-s">${inColl(c.id)} Rezepte</span></span>
             <${Icon} n="next" s=${18} />
           </button>`)}
         </div>
         <div class="quick-grid">${HP.REGIONS.map(g => html`
-          <button type="button" key=${g.id} class="qa" onClick=${() => ctx.open({ t: "book", region: g.id })}><span class="emo" aria-hidden="true">${g.emoji}</span>${g.label}<span class="qa-n">${inRegion(g.id)}</span></button>`)}
+          <button type="button" key=${g.id} class="qa" onClick=${() => book({ regions: [g.id] })}><span class="emo" aria-hidden="true">${g.emoji}</span>${g.label}<span class="qa-n">${inRegion(g.id)}</span></button>`)}
         </div>
-        <div><button type="button" class="btn" onClick=${() => ctx.open({ t: "book" })}><${Icon} n="search" s=${18} />Ganzes Rezeptbuch durchblättern</button></div>
+        <div class="btn-row">
+          <button type="button" class="btn" onClick=${() => book({ src: "book" })}><${Icon} n="search" s=${18} />Rezeptbuch durchsuchen</button>
+          <button type="button" class="btn" onClick=${() => book({ cats: ["sweet"] })}><span class="emo" aria-hidden="true">🍰</span>Desserts</button>
+        </div>
         <p class="hint">Ein Rezept gefällt? Öffnen und «Übernehmen», oder einfach eine Notiz schreiben: Dann gehört es zu euren Rezepten und lässt sich anpassen.</p>
       </section>`;
   }
-  const BOOK_TAGS = [["vegi", "Vegi"], ["vegan", "Vegan"], ["quick", "Schnell"], ["cheap", "Günstig"], ["guests", "Für Gäste"]];
-  function BookSheet({ ctx, coll: coll0, region: region0, kitchen: kitchen0, tags: tags0, q: q0, onClose }) {
-    const [coll, setColl] = useState(coll0 || "");
-    const [region, setRegion] = useState(region0 || (kitchen0 ? HP.kitchen(kitchen0).region : ""));
-    const [kitchen, setKitchen] = useState(kitchen0 || "");
-    const [tags, setTags] = useState(tags0 || []);
-    const [cat, setCat] = useState("");
-    const [q, setQ] = useState(q0 || "");
-    const own = ctx.data.recipes || [];
-    const taken = useMemo(() => new Set(own.map(r => r.title.toLowerCase())), [own]);
-    const words = useMemo(() => HP.searchWords(q), [q]);
-    const list = useMemo(() => HP.ideas().filter(r =>
-      (!coll || r.coll.indexOf(coll) >= 0) && (!region || (r.kitchen && HP.kitchen(r.kitchen).region === region)) && (!kitchen || r.kitchen === kitchen) &&
-      (!cat || r.cat === cat) && tags.every(t => HP.hasTag(r, t)) && (!words.length || HP.recipeMatch(r, words).score === words.length)), [coll, region, kitchen, cat, tags, words]);
-    const groups = useMemo(() => {
-      if (coll) return [{ k: null, items: list }];
-      const by = {};
-      list.forEach(r => { (by[r.kitchen || "ch"] || (by[r.kitchen || "ch"] = [])).push(r); });
-      return HP.KITCHENS.filter(k => by[k.id]).map(k => ({ k, items: by[k.id].sort((a, b) => a.title.localeCompare(b.title, "de")) }));
-    }, [list, coll]);
-    const back = { t: "book", coll, region, kitchen, tags, q };
-    const c = coll ? HP.collection(coll) : null;
-    const toggleTag = t => setTags(tags.indexOf(t) >= 0 ? tags.filter(x => x !== t) : tags.concat(t));
-    const kitchens = HP.KITCHENS.filter(k => k.region === region);
-    const ownOf = r => own.find(x => same(x.title, r.title));
+  /* One group of filter chips. multi: several at once; otherwise one or none. */
+  function Chips({ label, items, value, multi, onChange, mini }) {
+    const on = id => (multi ? value.indexOf(id) >= 0 : value === id);
     return html`
-      <${Sheet} title=${c ? c.label : region ? HP.region(region).label : "Rezeptbuch"} onClose=${onClose} closeLabel="Fertig">
+      <div class="fgroup" role="group" aria-label=${label}>
+        <span class="label">${label}</span>
+        <div class="chips">${items.map(it => html`
+          <button type="button" key=${it.id} class=${"chip" + (mini ? " mini" : "")} aria-pressed=${String(on(it.id))}
+            onClick=${() => onChange(multi ? tog(value, it.id) : on(it.id) ? (typeof value === "number" ? 0 : "") : it.id)}>${it.emoji && html`<span class="emo" aria-hidden="true">${it.emoji}</span>`}${it.label}</button>`)}
+        </div>
+      </div>`;
+  }
+  const TIME_CHIPS = HP.TIMES.map(t => ({ id: t, label: "bis " + t + " Min.", emoji: t <= 15 ? "⚡" : "" }));
+  const TAG_CHIPS = ["cheap", "kids", "guests", "prep"].map(id => HP.recipeTag(id));
+  const TASTE = [{ id: "light", label: "Leicht", emoji: "🍃" }, { id: "hearty", label: "Deftig", emoji: "🍖" }];
+  const HEAT = [{ id: "mild", label: "Mild", emoji: "😌" }, { id: "hot", label: "Scharf", emoji: "🌶️" }];
+  const SRC = [{ id: "own", label: "Eure Rezepte", emoji: "🏠" }, { id: "book", label: "Rezeptbuch", emoji: "📖" }];
+  function FilterPanel({ f, set, n, onDone, onReset }) {
+    const kitchens = HP.KITCHENS.filter(k => f.regions.indexOf(k.region) >= 0);
+    return html`
+      <div class="fpanel" id="hp-filters">
+        <${Chips} label="Ernährung" items=${HP.DIETS} value=${f.diet} multi=${true} onChange=${v => set({ diet: v })} mini=${true} />
+        <${Chips} label="Zeit" items=${TIME_CHIPS} value=${f.time} onChange=${v => set({ time: v })} mini=${true} />
+        <${Chips} label="Gang" items=${HP.RECIPE_CATS.filter(c => c.id !== "other")} value=${f.cats} multi=${true} onChange=${v => set({ cats: v })} mini=${true} />
+        <${Chips} label="Hauptzutat" items=${HP.MAINS} value=${f.mains} multi=${true} onChange=${v => set({ mains: v })} mini=${true} />
+        <${Chips} label="Weltgegend" items=${HP.REGIONS} value=${f.regions} multi=${true} onChange=${v => set({ regions: v, kitchens: f.kitchens.filter(k => v.indexOf(HP.kitchen(k).region) >= 0) })} mini=${true} />
+        ${kitchens.length > 1 && html`<${Chips} label="Küche" items=${kitchens} value=${f.kitchens} multi=${true} onChange=${v => set({ kitchens: v })} mini=${true} />`}
+        <${Chips} label="Zubereitung" items=${HP.METHODS} value=${f.methods} multi=${true} onChange=${v => set({ methods: v })} mini=${true} />
+        <div class="two">
+          <${Chips} label="Geschmack" items=${TASTE} value=${f.mood} onChange=${v => set({ mood: v })} mini=${true} />
+          <${Chips} label="Schärfe" items=${HEAT} value=${f.spicy} onChange=${v => set({ spicy: v })} mini=${true} />
+        </div>
+        <${Chips} label="Passend für" items=${TAG_CHIPS} value=${f.tags} multi=${true} onChange=${v => set({ tags: v })} mini=${true} />
+        <${Chips} label="Sammlung" items=${HP.COLLECTIONS} value=${f.coll} onChange=${v => set({ coll: v })} mini=${true} />
+        <${Chips} label="Quelle" items=${SRC} value=${f.src} onChange=${v => set({ src: v })} mini=${true} />
+        <div class="btn-row">
+          <button type="button" class="btn primary" onClick=${onDone}>${n === 1 ? "1 Rezept zeigen" : n + " Rezepte zeigen"}</button>
+          <button type="button" class="btn" disabled=${!HP.filterCount(f)} onClick=${onReset}>Zurücksetzen</button>
+        </div>
+      </div>`;
+  }
+  /* The active filters as chips that remove themselves. */
+  function activeChips(f) {
+    const out = [], lab = (list, id) => (list.find(x => x.id === id) || {});
+    f.diet.forEach(id => out.push([lab(HP.DIETS, id), { diet: f.diet.filter(x => x !== id) }]));
+    if (f.time) out.push([{ label: "bis " + f.time + " Min.", emoji: "⏱️" }, { time: 0 }]);
+    f.cats.forEach(id => out.push([HP.recipeCat(id), { cats: f.cats.filter(x => x !== id) }]));
+    f.mains.forEach(id => out.push([HP.main(id), { mains: f.mains.filter(x => x !== id) }]));
+    f.regions.forEach(id => out.push([HP.region(id), { regions: f.regions.filter(x => x !== id), kitchens: f.kitchens.filter(k => HP.kitchen(k).region !== id) }]));
+    f.kitchens.forEach(id => out.push([HP.kitchen(id), { kitchens: f.kitchens.filter(x => x !== id) }]));
+    f.methods.forEach(id => out.push([lab(HP.METHODS, id), { methods: f.methods.filter(x => x !== id) }]));
+    if (f.mood) out.push([lab(TASTE, f.mood), { mood: "" }]);
+    if (f.spicy) out.push([lab(HEAT, f.spicy), { spicy: "" }]);
+    f.tags.forEach(id => out.push([HP.recipeTag(id), { tags: f.tags.filter(x => x !== id) }]));
+    if (f.coll) out.push([HP.collection(f.coll), { coll: "" }]);
+    if (f.src) out.push([lab(SRC, f.src), { src: "" }]);
+    return out;
+  }
+  const PAGE = 40;
+  function BookSheet({ ctx, f: f0, open: open0, onClose }) {
+    const [f, setF] = useState(() => Object.assign(HP.emptyFilter(), f0 || startFilter(ctx)));
+    const [panel, setPanel] = useState(!!open0);
+    const [shown, setShown] = useState(PAGE);
+    const own = ctx.data.recipes || [];
+    const pool = useMemo(() => poolOf(own), [own]);
+    const found = useMemo(() => HP.filterRecipes(pool, f), [pool, f]);
+    const set = p => { setShown(PAGE); setF(prev => Object.assign({}, prev, p)); };
+    const n = HP.filterCount(f), chips = activeChips(f);
+    const c = f.coll ? HP.collection(f.coll) : null;
+    const title = c ? c.label : f.regions.length === 1 && !f.kitchens.length ? HP.region(f.regions[0]).label : f.kitchens.length === 1 ? HP.kitchen(f.kitchens[0]).label : "Rezepte finden";
+    const back = { t: "book", f };
+    return html`
+      <${Sheet} title=${title} onClose=${onClose} closeLabel="Fertig">
         ${c && html`<p class="hint">${c.text}</p>`}
-        <div class="search">
-          <${Icon} n="search" s=${18} />
-          <label class="sr" for="hp-book-q">Im Rezeptbuch suchen</label>
-          <input id="hp-book-q" class="input" type="search" autocomplete="off" placeholder="z. B. Poulet, Kokosmilch" value=${q} onInput=${e => setQ(e.target.value)} />
+        <div class="find-row">
+          <div class="search">
+            <${Icon} n="search" s=${18} />
+            <label class="sr" for="hp-book-q">Rezepte durchsuchen</label>
+            <input id="hp-book-q" class="input" type="search" autocomplete="off" placeholder="Name oder Zutaten, z. B. Poulet, Kokos" value=${f.q} onInput=${e => set({ q: e.target.value })} />
+          </div>
+          <button type="button" class=${"btn" + (panel ? " primary" : "")} aria-expanded=${String(panel)} aria-controls="hp-filters" onClick=${() => setPanel(!panel)}><${Icon} n="sliders" s=${18} />Filter${n ? " (" + n + ")" : ""}</button>
         </div>
-        <div class="chips scroll" role="group" aria-label="Sammlung">
-          ${HP.COLLECTIONS.map(x => html`<button type="button" key=${x.id} class="chip mini" aria-pressed=${String(coll === x.id)} onClick=${() => setColl(coll === x.id ? "" : x.id)}><span class="emo" aria-hidden="true">${x.emoji}</span>${x.label}</button>`)}
-        </div>
-        <div class="chips scroll" role="group" aria-label="Weltgegend">
-          ${HP.REGIONS.map(g => html`<button type="button" key=${g.id} class="chip mini" aria-pressed=${String(region === g.id)} onClick=${() => { setKitchen(""); setRegion(region === g.id ? "" : g.id); }}><span class="emo" aria-hidden="true">${g.emoji}</span>${g.label}</button>`)}
-        </div>
-        ${kitchens.length > 1 && html`<div class="chips scroll" role="group" aria-label="Küche">
-          ${kitchens.map(k => html`<button type="button" key=${k.id} class="chip mini" aria-pressed=${String(kitchen === k.id)} onClick=${() => setKitchen(kitchen === k.id ? "" : k.id)}><span class="emo" aria-hidden="true">${k.emoji}</span>${k.label}</button>`)}
-        </div>`}
-        <div class="chips scroll" role="group" aria-label="Merkmale">
-          ${BOOK_TAGS.map(([t, label]) => html`<button type="button" key=${t} class="chip mini" aria-pressed=${String(tags.indexOf(t) >= 0)} onClick=${() => toggleTag(t)}><span class="emo" aria-hidden="true">${HP.recipeTag(t).emoji}</span>${label}</button>`)}
-          <select class="select mini" aria-label="Art des Gerichts" value=${cat} onChange=${e => setCat(e.target.value)}>
-            <option value="">Alle Gänge</option>
-            ${HP.RECIPE_CATS.filter(x => x.id !== "other").map(x => html`<option value=${x.id}>${x.emoji} ${x.label}</option>`)}
-          </select>
-        </div>
-        <p class="hint" aria-live="polite">${list.length ? (list.length === 1 ? "1 Rezept" : list.length + " Rezepte") : "Kein Rezept passt zu dieser Auswahl."}</p>
-        ${groups.map(g => html`
-          <section class="stack" key=${g.k ? g.k.id : "all"}>
-            ${g.k && html`<h2 class="aisle"><span class="emo" aria-hidden="true">${g.k.emoji}</span>${g.k.label}<span class="aisle-n">${g.items.length}</span></h2>`}
-            <div class="list">${g.items.map(r => {
-              const mine = taken.has(r.title.toLowerCase()) ? ownOf(r) : null;
-              return html`<${RecipeRow} key=${r.id} ctx=${ctx} r=${mine || r} back=${back} sub=${(mine ? "✓ Bei euren Rezepten · " : "") + metaOf(r) + (c && r.kitchen ? " · " + HP.kitchen(r.kitchen).label : "")} />`;
-            })}</div>
-          </section>`)}
+        ${panel && html`<${FilterPanel} f=${f} set=${set} n=${found.length} onDone=${() => setPanel(false)} onReset=${() => set(Object.assign(HP.emptyFilter(), { q: f.q, sort: f.sort }))} />`}
+        ${!panel && chips.length > 0 && html`
+          <div class="chips scroll" aria-label="Aktive Filter">${chips.map(([it, p], i) => html`
+            <button type="button" key=${i} class="chip mini on" aria-label=${it.label + " entfernen"} onClick=${() => set(p)}>${it.emoji && html`<span class="emo" aria-hidden="true">${it.emoji}</span>`}${it.label}<span class="chip-x" aria-hidden="true">✕</span></button>`)}
+          </div>`}
+        ${!panel && html`
+          <div class="rc-sub">
+            <p class="hint" aria-live="polite">${found.length ? (found.length === 1 ? "1 Rezept" : found.length + " Rezepte") : "Kein Rezept passt. Nimm einen Filter weg."}</p>
+            <select class="select mini" aria-label="Sortieren" value=${f.sort} onChange=${e => set({ sort: e.target.value })}>
+              ${HP.SORTS.map(([id, label]) => html`<option value=${id}>${label}</option>`)}
+            </select>
+          </div>
+          <div class="list">${found.slice(0, shown).map(x => {
+            const t = HP.traits(x.r), gf = f.diet.indexOf("gf") >= 0 && t.gf.level === "swap" ? " · glutenfrei mit Ersatz" : "";
+            return html`<${RecipeRow} key=${x.r.id} ctx=${ctx} r=${x.r} back=${back} hits=${x.hits.length ? x.hits : null}
+              sub=${(x.hits.length > 1 ? "passt: " + x.hits.join(", ") + " · " : "") + metaOf(x.r) + (x.r.kitchen ? " · " + HP.kitchen(x.r.kitchen).label : "") + gf} />`;
+          })}</div>
+          ${found.length > shown && html`<div><button type="button" class="btn block" onClick=${() => setShown(shown + PAGE)}><${Icon} n="down" s=${18} />Weitere ${Math.min(PAGE, found.length - shown)} von ${found.length - shown}</button></div>`}`}
       <//>`;
+  }
+
+  /* ---------- the menu finder ---------- */
+  const LUST = [
+    { id: "r:asien", label: "Asiatisch", emoji: "🥢" }, { id: "k:it", label: "Italienisch", emoji: "🍝" }, { id: "k:ch", label: "Schweizerisch", emoji: "🇨🇭" },
+    { id: "k:fr", label: "Französisch", emoji: "🥖" }, { id: "k:in", label: "Indisch", emoji: "🍛" }, { id: "r:nahost", label: "Orientalisch", emoji: "🧆" },
+    { id: "k:latam", label: "Mexikanisch", emoji: "🌮" }, { id: "k:es", label: "Spanisch", emoji: "🥘" }, { id: "k:gr", label: "Griechisch", emoji: "🫒" },
+    { id: "c:glasiert", label: "Glasiertes Poulet", emoji: "🍗" }, { id: "c:ottolenghi", label: "Ottolenghi-Stil", emoji: "🌿" }
+  ];
+  const WHAT = ["poulet", "rind", "schwein", "lamm", "fisch", "meer", "tofu", "huelsen", "ei", "kaese", "pasta", "reis", "kartoffel"].map(id => HP.main(id));
+  const FINDER_DIET = HP.DIETS.filter(d => d.id !== "gfstrict");
+  function finderPrefs(p) {
+    const kit = new Set();
+    let coll = "";
+    p.lust.forEach(l => {
+      const [k, v] = l.split(":");
+      if (k === "k") kit.add(v);
+      else if (k === "r") HP.KITCHENS.filter(x => x.region === v).forEach(x => kit.add(x.id));
+      else if (k === "c") coll = v;
+    });
+    return { time: p.time, kitchens: Array.from(kit), coll, mains: p.mains, diet: p.diet, mood: p.mood === "hot" ? "" : p.mood, spicy: p.mood === "hot" ? "hot" : p.kids ? "mild" : "",
+      guests: p.guests, kids: p.kids, fridge: p.fridge };
+  }
+  function FinderSheet({ ctx, p: p0, i: i0, onClose }) {
+    const [p, setP] = useState(() => p0 || { time: 0, lust: [], mains: [], diet: ctx.home.gf ? ["gf"] : [], mood: "", guests: false, kids: false, fridge: "", menu: false, seed: HP.today() });
+    const [i, setI] = useState(i0 || 0);
+    const set = x => { setI(0); setP(prev => Object.assign({}, prev, x)); };
+    const pool = useMemo(() => poolOf(ctx.data.recipes || []), [ctx.data.recipes]);
+    const planned = useMemo(() => mealsBetween(ctx, HP.today(), HP.addDays(HP.today(), 7)).map(o => o.e.rid).filter(Boolean), [ctx.data.events]);
+    const hist = { today: HP.today(), planned };
+    const res = useMemo(() => HP.suggest(pool, finderPrefs(p), hist, p.seed), [pool, p, planned]);
+    const top = res.length ? res[i % res.length] : null;
+    const menu = useMemo(() => (p.menu && top ? HP.menuFor(pool, top.r, finderPrefs(p), hist, p.seed) : null), [p, top, pool]);
+    const back = { t: "finder", p, i };
+    const view = r => ctx.open({ t: "recipe", id: r.id, back });
+    const [busy, run] = useBusy();
+    const allToList = () => run(async () => {
+      const rs = [menu.starter, menu.main, menu.dessert].filter(Boolean);
+      for (const r of rs) if (!(await toShopping(ctx, r, r.ingr.filter(l => !HP.isStaple(l))))) return;
+    });
+    const Card = ({ r, why, course }) => html`
+      <div class="fcard">
+        ${course && html`<span class="eyebrow">${course}</span>`}
+        <button type="button" class="idea-card" onClick=${() => view(r)}>
+          <span class="idea-e" aria-hidden="true">${HP.dishEmoji(r.emoji)}</span>
+          <span class="idea-body">
+            <span class="idea-src">${r.idea ? "Aus dem Rezeptbuch" + (r.kitchen ? " · " + HP.kitchen(r.kitchen).label : "") : "Aus euren Rezepten"}</span>
+            <span class="idea-t">${r.title}</span>
+            <span class="x-s">${metaOf(r)}</span>
+          </span>
+        </button>
+        ${why && why.length > 0 && html`<div class="chips">${why.slice(0, 4).map((w, k) => html`<span key=${k} class="chip static mini">✓ ${w}</span>`)}</div>`}
+      </div>`;
+    return html`
+      <${Sheet} title="Menü-Finder" onClose=${onClose} closeLabel="Fertig">
+        <p class="hint">Ein paar Fragen, dann schlägt der Finder vor, was passt. Er kennt eure Bewertungen und lässt aus, was ihr gerade gekocht oder schon eingeplant habt.</p>
+        <${Chips} label="Wie viel Zeit habt ihr?" items=${TIME_CHIPS} value=${p.time} onChange=${v => set({ time: v })} mini=${true} />
+        <${Chips} label="Worauf habt ihr Lust?" items=${LUST} value=${p.lust} multi=${true} onChange=${v => set({ lust: v })} mini=${true} />
+        <${Chips} label="Was soll's sein?" items=${WHAT} value=${p.mains} multi=${true} onChange=${v => set({ mains: v })} mini=${true} />
+        <${Chips} label="Ernährung" items=${FINDER_DIET} value=${p.diet} multi=${true} onChange=${v => set({ diet: v })} mini=${true} />
+        <div class="fgroup" role="group" aria-label="Stimmung">
+          <span class="label">Stimmung</span>
+          <div class="chips">
+            ${[["light", "Leicht", "🍃"], ["hearty", "Deftig", "🍖"], ["hot", "Scharf", "🌶️"]].map(([id, label, e]) => html`<button type="button" key=${id} class="chip mini" aria-pressed=${String(p.mood === id)} onClick=${() => set({ mood: p.mood === id ? "" : id })}><span class="emo" aria-hidden="true">${e}</span>${label}</button>`)}
+            <button type="button" class="chip mini" aria-pressed=${String(p.guests)} onClick=${() => set({ guests: !p.guests })}><span class="emo" aria-hidden="true">🥂</span>Gäste kommen</button>
+            <button type="button" class="chip mini" aria-pressed=${String(p.kids)} onClick=${() => set({ kids: !p.kids })}><span class="emo" aria-hidden="true">🧒</span>Kinder essen mit</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="hp-fd-fridge">Was ist im Kühlschrank? (optional)</label>
+          <input id="hp-fd-fridge" class="input" autocomplete="off" placeholder="z. B. Zucchetti, Feta, Poulet" value=${p.fridge} onInput=${e => set({ fridge: e.target.value })} />
+        </div>
+        <label class="check"><input id="hp-fd-menu" type="checkbox" checked=${p.menu} onChange=${e => set({ menu: e.target.checked })} /><span>Ganzes Menü mit Vorspeise und Dessert</span></label>
+        <section class="finder-out" aria-live="polite">
+          <h2 class="sec-h">${top ? (p.menu ? "Euer Menü" : "Unser Vorschlag") : "Nichts gefunden"}</h2>
+          ${!top && html`<p>Dazu passt kein Rezept. Lass eine Bedingung weg, etwa die Zeit oder die Küche.</p>`}
+          ${top && !p.menu && html`<${Card} r=${top.r} why=${top.why} />`}
+          ${top && p.menu && menu && html`
+            ${menu.starter && html`<${Card} r=${menu.starter} course="Vorspeise" />`}
+            <${Card} r=${menu.main} why=${top.why} course="Hauptgang" />
+            ${menu.dessert && html`<${Card} r=${menu.dessert} course="Dessert" />`}`}
+          ${top && html`
+            <div class="btn-row">
+              <button type="button" class="btn primary" onClick=${() => view(top.r)}>Rezept ansehen</button>
+              <button type="button" class="btn" onClick=${() => ctx.open({ t: "meal", rid: top.r.id })}><${Icon} n="plus" s=${16} />Einplanen</button>
+              <button type="button" class="btn" disabled=${res.length < 2} onClick=${() => setI(i + 1)}><span class="emo" aria-hidden="true">🎲</span>Noch ein Vorschlag</button>
+              ${p.menu && menu && html`<button type="button" class="btn" disabled=${busy} onClick=${allToList}><${Icon} n="cart" s=${16} />Alles auf die Einkaufsliste</button>`}
+            </div>
+            <p class="hint">${res.length === 1 ? "Ein Rezept passt." : res.length + " Rezepte passen."}</p>`}
+          ${res.length > 1 && !p.menu && html`
+            <span class="label">Auch passend</span>
+            <div class="list">${res.filter(x => x !== top).slice(0, 5).map(x => html`<${RecipeRow} key=${x.r.id} ctx=${ctx} r=${x.r} back=${back} sub=${x.why.slice(0, 3).join(" · ") || metaOf(x.r)} />`)}</div>`}
+        </section>
+      <//>`;
+  }
+
+  /* ---------- gluten-free ---------- */
+  function GlutenBox({ ctx, r }) {
+    const g = HP.traits(r).gf, on = !!ctx.home.gf;
+    if (g.level === "free" && !g.checks.length) return html`<p class="gf-line"><span class="emo" aria-hidden="true">🌾</span>Glutenfrei, wie es dasteht.</p>`;
+    return html`
+      <details class=${"gfbox " + g.level} open=${on}>
+        <summary><span class="emo" aria-hidden="true">🌾</span>${HP.GF_LABEL[g.level]}${g.level === "swap" ? " (" + g.swaps.length + (g.swaps.length === 1 ? " Zutat ersetzen)" : " Zutaten ersetzen)") : ""}</summary>
+        ${g.swaps.length > 0 && html`<ul class="tips">${g.swaps.map((x, i) => html`<li key=${i}><strong>${x.line}</strong>: ${x.tip}</li>`)}</ul>`}
+        ${g.hits.length > 0 && html`<p class="hint">Glutenhaltig und schwer zu ersetzen: ${g.hits.join(", ")}. Mit glutenfreiem Mehl oder Teig wird es ein anderes Gericht; lieber ein Rezept mit «Glutenfrei» wählen.</p>`}
+        ${g.checks.length > 0 && html`<p class="hint">Auf dem Etikett prüfen: ${g.checks.join(", ")}. Achte auf das Symbol mit der durchgestrichenen Ähre (Coop «Free From», Migros «aha!»).</p>`}
+      </details>`;
   }
 
   /* ---------- notes: how was it, and what to do differently next time ---------- */
@@ -415,6 +586,7 @@
           <div class="note fresh"><span class="emo" aria-hidden="true">✨</span><div class="stack">
             <p><strong>Gespeichert.</strong> Was jetzt? Zutaten auf die Einkaufsliste${store ? " für " + store.label : ""}, einplanen oder gleich loskochen.</p>
           </div></div>`}
+        <${GlutenBox} ctx=${ctx} r=${r} />
         ${sum.tips.length > 0 && html`
           <div class="note tipnote"><span class="emo" aria-hidden="true">💡</span><div class="stack">
             <p><strong>Nächstes Mal anders</strong></p>
@@ -722,5 +894,5 @@
       <//>`;
   }
 
-  Object.assign(U, { Recipes, RecipeView, RecipeForm, MealSheet, ImportSheet, BookSheet, MoodPick, addNote, adoptRecipe: adopt, findRecipe, dailyIdea, recipeMeta: metaOf });
+  Object.assign(U, { Recipes, RecipeView, RecipeForm, MealSheet, ImportSheet, BookSheet, FinderSheet, MoodPick, GlutenBox, addNote, adoptRecipe: adopt, findRecipe, dailyIdea, recipeMeta: metaOf });
 })();

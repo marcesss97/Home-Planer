@@ -752,3 +752,45 @@ details.raw .code { margin-top: 10px; max-height: 260px; overflow: auto; }
 .chips.scroll::-webkit-scrollbar { display: none; }
 .chips.scroll > * { flex: none; }
 .sheet-body > .chips.scroll + .chips.scroll { margin-top: -14px; }
+
+/* Glutenfrei */
+.gfbox { padding: 12px 14px; border-radius: 16px; background: var(--inset); font-size: 14.5px; }
+.gfbox.swap { background: var(--sun-soft); }
+.gfbox.contains { background: var(--neg-soft); }
+.gfbox summary { font-weight: 600; cursor: pointer; }
+.gfbox summary .emo { margin-right: 6px; }
+.gfbox[open] summary { margin-bottom: 8px; }
+.gfbox .hint { margin-top: 6px; }
+.gf-line { display: flex; align-items: center; gap: 6px; font-size: 14.5px; color: var(--ink-2); }
+
+/* Monatsabrechnung */
+.month-card { margin-top: -4px; }
+.month-nav { margin: -4px 0 -8px; }
+.month-sum { margin: 0; }
+.mtable { display: grid; border: 2px solid var(--line); border-radius: 16px; overflow: hidden; }
+.mrow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 12px; border-top: 2px solid var(--line); font-variant-numeric: tabular-nums; }
+.mrow > span:not(:first-child) { min-width: 72px; text-align: right; }
+.mrow.mhead { border-top: 0; background: var(--inset); font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); }
+.mwho { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
+.x-amt { font: 600 15px/1.2 var(--display); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.print-only { display: none; }
+@media print {
+  body.print-sheet * { visibility: hidden; }
+  body.print-sheet .scrim .sheet, body.print-sheet .scrim .sheet * { visibility: visible; }
+  body.print-sheet .scrim { position: absolute; inset: 0; display: block; background: none; }
+  body.print-sheet .sheet { position: absolute; top: 0; left: 0; width: 100%; max-width: none; height: auto; box-shadow: none; }
+  body.print-sheet .sheet-body { overflow: visible; }
+  body.print-sheet .sheet-head button, body.print-sheet .no-print { display: none !important; }
+  body.print-sheet .print-only { display: block; }
+}
+
+/* Filter und Menü-Finder */
+.find-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.find-row .search { margin: 0; }
+.fpanel { display: grid; gap: 14px; padding: 14px; border: 2px solid var(--line); border-radius: 18px; background: var(--inset); }
+.fgroup { display: grid; gap: 8px; min-width: 0; }
+.chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-hi); }
+.chip .chip-x { margin-left: 2px; font-size: 12px; color: var(--ink-2); }
+.finder-out { display: grid; gap: 12px; padding-top: 6px; border-top: 2px solid var(--line); }
+.fcard { display: grid; gap: 8px; }
+.finder-card { background: linear-gradient(120deg, var(--accent-soft), var(--surface) 70%); }

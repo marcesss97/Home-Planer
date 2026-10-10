@@ -205,7 +205,7 @@
             <ul class="feat">
               <li><span class="x-ic k-rent" aria-hidden="true">💰</span>Gemeinsame Kasse: wer was bezahlt hat und wer wem wie viel schuldet</li>
               <li><span class="x-ic k-groceries" aria-hidden="true">🛒</span>Eine Einkaufsliste, die im Laden für alle gleich aussieht</li>
-              <li><span class="x-ic k-food" aria-hidden="true">🍳</span>Rezepte, Kochideen und ein Wochenplan, Zutaten mit einem Tipp auf die Liste</li>
+              <li><span class="x-ic k-food" aria-hidden="true">🍳</span>Rezeptbuch, Menü-Finder und Wochenplan, Zutaten mit einem Tipp auf die Liste</li>
               <li><span class="x-ic k-internet" aria-hidden="true">📅</span>Gemeinsamer Kalender mit Abfuhr, Geburtstagen und Besuch</li>
               <li><span class="x-ic k-household" aria-hidden="true">🪴</span>Giessplan: welche Pflanze heute dran ist und wer zuletzt gegossen hat</li>
               <li><span class="x-ic k-utilities" aria-hidden="true">📁</span>Infos wie Mietvertrag, Versicherungen und WLAN, mit Fristen</li>
@@ -612,6 +612,11 @@
           <p class="hint">Tippe auf ein Bild, um den Avatar zu ändern. «Ich» merkt sich nur dieses Gerät.</p>
         </div>
         <div class="field">
+          <span class="label">Küche</span>
+          <label class="check"><input id="hp-set-gf" type="checkbox" checked=${!!home.gf} onChange=${e => act.patchHome(home.id, { gf: e.target.checked })} /><span>Bei uns wird glutenfrei gekocht</span></label>
+          <p class="hint">Dann zeigen Würfel und Menü-Finder zuerst glutenfreie Rezepte, jedes Rezept nennt den glutenfreien Ersatz (etwa Tamari statt Sojasauce), und auf der Einkaufsliste steht dabei «glutenfrei».</p>
+        </div>
+        <div class="field">
           <label for="hp-set-base">Währung der Kasse</label>
           <${CurSelect} id="hp-set-base" value=${home.base} home=${home} label="Hauptwährung" disabled=${loading || list.length > 0} onChange=${c => { if (!loading && !list.length && c && c !== home.base) act.patchHome(home.id, { base: c }); }} />
           ${list.length > 0 && html`<p class="hint">Die Währung bleibt, sobald Buchungen erfasst sind. Sonst würden alle Kurse nicht mehr stimmen.</p>`}
@@ -693,6 +698,13 @@
     const deadlines = useMemo(() => (data.infos || []).map(i => ({ i, n: HP.dueOf(i, today) })).filter(x => x.n != null && x.n >= -3 && x.n <= 60).sort((a, b) => a.n - b.n), [data.infos, today]);
     const nowEv = occ.filter(o => o.date === today), soonEv = occ.filter(o => o.date > today && (o.first || o.date === HP.addDays(today, 1)));
     const thirsty = plants.filter(x => x.due.days <= 0), soonPl = plants.filter(x => x.due.days > 0 && x.due.days <= 2);
+    /* In den ersten zehn Tagen eines Monats: Ist der Vormonat bei den Einkäufen noch offen, steht es hier. */
+    const lastMonth = useMemo(() => {
+      if (+today.slice(8, 10) > 10 || members.length < 2) return null;
+      const y = +today.slice(0, 4), m = +today.slice(5, 7) - 1, ym = m < 1 ? (y - 1) + "-12" : y + "-" + HP.pad(m);
+      const r = HP.monthReport(home, data.expenses || [], ym, "shop");
+      return r.open ? r : null;
+    }, [home, data.expenses, today, members.length]);
     const urgent = deadlines.filter(x => x.n <= 7), later = deadlines.filter(x => x.n > 7);
     const loading = COLS.some(c => data[c] === null);
     const plantRow = ({ p, due }) => {
@@ -749,6 +761,12 @@
             <button type="button" key=${m.id} role="radio" aria-checked="false" class="chip" onClick=${() => { setMe(m.id); setPick(false); open({ t: "avatar", m: m.id }); }}><${Av} m=${m} s=${1} />${m.name}</button>`)}
           </div>
         </section>`}
+      ${lastMonth && html`
+        <button type="button" class="book-coll month-card" onClick=${() => open({ t: "month", ym: lastMonth.ym, scope: "shop" })}>
+          <span class="book-e" aria-hidden="true">🧾</span>
+          <span class="x-main"><span class="x-t">Abrechnung ${HP.monthLabel(lastMonth.ym)}</span><span class="x-s">Einkäufe ${HP.money(lastMonth.total, base)} · ${lastMonth.open === 1 ? "1 Zahlung offen" : lastMonth.open + " Zahlungen offen"}</span></span>
+          <${Icon} n="next" s=${18} />
+        </button>`}
       <section class="panel">
         <div class="panel-head"><h2 class="sec-h">Heute</h2>${nToday > 0 && html`<span class="pill">${nToday}</span>`}</div>
         ${nToday === 0
@@ -761,7 +779,7 @@
       </section>
       ${idea && html`
         <section class="panel">
-          <div class="panel-head"><h2 class="sec-h">Kochidee für heute</h2><button type="button" class="btn ghost small" onClick=${() => onTab("recipes")}>Rezepte<${Icon} n="next" s=${16} /></button></div>
+          <div class="panel-head"><h2 class="sec-h">Kochidee für heute</h2><button type="button" class="btn ghost small" onClick=${() => open({ t: "finder" })}><span class="emo" aria-hidden="true">🔮</span>Menü-Finder</button></div>
           <div class="list flat">
             <div class="x row-act">
               <button type="button" class="x-in" onClick=${() => open({ t: "recipe", id: idea.id })}>
@@ -1196,6 +1214,7 @@
         else if (s.t === "transfer") sheetEl = html`<${U.TransferForm} key=${s.k} home=${h} transfer=${s.e || null} preset=${s.preset} meId=${meId} act=${act} onClose=${close} say=${say} />`;
         else if (s.t === "item") sheetEl = html`<${U.ItemSheet} key=${s.k} ctx=${ctx} it=${findIn("shopping", s.it.id, s.it)} onClose=${close} />`;
         else if (s.t === "aisles") sheetEl = html`<${U.AislesSheet} key=${s.k} ctx=${ctx} onClose=${close} />`;
+        else if (s.t === "month") sheetEl = html`<${U.MonthSheet} key=${s.k} ctx=${ctx} ym=${s.ym} scope=${s.scope} onClose=${close} />`;
         else if (s.t === "calsync") sheetEl = html`<${U.CalSync} key=${s.k} ctx=${ctx} onClose=${close} />`;
         else if (s.t === "calimport") sheetEl = html`<${U.CalImport} key=${s.k} ctx=${ctx} onClose=${close} />`;
         else if (s.t === "event") sheetEl = html`<${U.EventForm} key=${s.k} ctx=${ctx} ev=${s.e ? findIn("events", s.e.id, s.e) : null} date=${s.date} at=${s.at} onClose=${close} />`;
@@ -1204,7 +1223,8 @@
           if (r) sheetEl = html`<${U.RecipeView} key=${s.k} ctx=${ctx} r=${r} plan=${s.plan} fresh=${s.fresh}
             onClose=${() => (s.back ? setSheet(Object.assign({}, s.back, { k: newId() })) : close())} />`;
         }
-        else if (s.t === "book") sheetEl = html`<${U.BookSheet} key=${s.k} ctx=${ctx} coll=${s.coll} region=${s.region} kitchen=${s.kitchen} tags=${s.tags} q=${s.q} onClose=${close} />`;
+        else if (s.t === "book") sheetEl = html`<${U.BookSheet} key=${s.k} ctx=${ctx} f=${s.f} open=${s.open} onClose=${close} />`;
+        else if (s.t === "finder") sheetEl = html`<${U.FinderSheet} key=${s.k} ctx=${ctx} p=${s.p} i=${s.i} onClose=${close} />`;
         /* Editing a recipe that was open leads back to it; a new one opens once it is saved. */
         else if (s.t === "recipe-edit") sheetEl = html`<${U.RecipeForm} key=${s.k} ctx=${ctx} r=${s.r ? findIn("recipes", s.r.id, s.r) : null} draft=${s.draft} source=${s.source} how=${s.how}
           onClose=${deleted => (s.r && !deleted ? setSheet({ t: "recipe", id: s.r.id, k: newId() }) : close())}

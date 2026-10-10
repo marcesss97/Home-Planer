@@ -327,7 +327,7 @@ window.HPStore = (function () {
     COLS.forEach(function (c) { out[c] = ((cols && cols[c]) || []).map(function (e) { return clone(e); }); });
     return {
       format: "homeplaner", version: 1, exported: new Date().toISOString(),
-      home: { name: home.name, base: home.base, rates: home.rates || {}, members: home.members || {}, created: home.created || 0 },
+      home: { name: home.name, base: home.base, rates: home.rates || {}, members: home.members || {}, created: home.created || 0, store: home.store || "", aisles: home.aisles || {}, gf: !!home.gf },
       cols: out
     };
   }
@@ -369,14 +369,16 @@ window.HPStore = (function () {
       name = stem + " (Sicherung)";
       while (taken[name]) { n++; name = stem + " (Sicherung " + n + ")"; }
     }
-    var data = { name: name, base: home.base, rates: home.rates, members: home.members, created: home.created || Date.now() }, cols = {}, count = 0;
+    var data = { name: name, base: home.base, rates: home.rates, members: home.members, created: home.created || Date.now(), store: home.store, aisles: home.aisles, gf: home.gf }, cols = {}, count = 0;
     var src = obj.cols && typeof obj.cols === "object" ? obj.cols : {};
     COLS.forEach(function (col) {
       cols[col] = {};
       (Array.isArray(src[col]) ? src[col].slice(0, 5000) : []).forEach(function (raw, i) {
         var eid = raw && docId(raw.id) ? raw.id : "x" + i + randomId(6), e = NORM[col](eid, raw);
         if (!e) return;
-        var body = clone(e); delete body.id; cols[col][eid] = body; count++;
+        var body = clone(e); delete body.id;
+        if (col === "recipes") body.notes = HP.notesMap(e.notes);           // Notizen als Tabelle, damit neue dazukommen können
+        cols[col][eid] = body; count++;
       });
     });
     lput(id, { home: data, cols: cols });

@@ -304,7 +304,8 @@
       if (lock.current) return;
       if (foreign && rateCtl.busy) { setErr("Der Tageskurs wird noch geladen. Einen Moment, dann nochmal speichern."); return; }
       if (foreign && !rate) { setErr("Gib den Wechselkurs für " + d.cur + " ein: Wie viel " + base + " kostet 1 " + d.cur + "?"); return; }
-      const body = Object.assign({ id: d.id, kind: "transfer", amount, cur: d.cur, rate: null, rateAuto: false, rateDate: "", date: d.date, payer: d.from, to: d.to, by: d.by, ts: d.ts, up: Date.now() }, foreign ? rateFields(d) : {});
+      const body = Object.assign({ id: d.id, kind: "transfer", amount, cur: d.cur, rate: null, rateAuto: false, rateDate: "", date: d.date, payer: d.from, to: d.to, by: d.by, ts: d.ts, up: Date.now(),
+        title: transfer ? transfer.title || "" : "", settles: transfer ? transfer.settles || "" : "" }, foreign ? rateFields(d) : {});   // eine Zahlung aus der Monatsabrechnung bleibt es
       const problem = HP.check(body, home);
       if (problem) { setErr(problem); return; }
       lock.current = true; setErr(null); setBusy(true);
@@ -555,6 +556,129 @@
   }
 
   /* ---------- the tab ---------- */
+  /* ---------- the monthly statement ---------- */
+  function shiftYm(ym, n) {
+    let y = +ym.slice(0, 4), m = +ym.slice(5, 7) + n;
+    while (m < 1) { m += 12; y--; }
+    while (m > 12) { m -= 12; y++; }
+    return y + "-" + HP.pad(m);
+  }
+  function MonthSheet({ ctx, ym: ym0, scope: scope0, onClose }) {
+    const { home, data, who, meId, act, say, open } = ctx;
+    const base = home.base, now = HP.today().slice(0, 7);
+    const [ym, setYm] = useState(ym0 || now);
+    const [scope, setScope] = useState(scope0 || "shop");
+    const [busy, setBusy] = useState(false);
+    const [copyBox, setCopyBox] = useState(null);
+    const rep = useMemo(() => HP.monthReport(home, data.expenses || [], ym, scope), [home, data.expenses, ym, scope]);
+    const nameOf = id => who(id).name, label = HP.monthLabel(ym);
+    const ids = Object.keys(rep.per).filter(id => rep.per[id].paid || rep.per[id].share || !who(id).gone);
+    const catMax = rep.cats.reduce((m, c) => Math.max(m, c.total), 0);
+    const diff = rep.prev ? Math.round((rep.total - rep.prev) / rep.prev * 100) : null;
+    const pay = async p => {
+      if (busy) return;
+      setBusy(true);
+      const ok = await act.save("expenses", { id: docId("t"), kind: "transfer", title: "Abrechnung " + label + (scope === "shop" ? " (Einkäufe)" : ""), amount: p.amount, cur: base, rate: null, rateAuto: false, rateDate: "",
+        date: HP.today(), payer: p.from, to: p.to, settles: rep.tag, by: meId || null, ts: Date.now(), up: Date.now() });
+      setBusy(false);
+      if (ok) say(nameOf(p.from) + " → " + nameOf(p.to) + ": als bezahlt eingetragen.");
+    };
+    const text = () => HP.monthText(home, rep, nameOf);
+    const share = () => { navigator.share({ text: text() }).catch(() => {}); };
+    const copy = () => copyText(text(), () => { setCopyBox(null); say("Abrechnung kopiert."); }, setCopyBox);
+    const csv = () => window.HPStore.download("abrechnung-" + ym + (scope === "shop" ? "-einkaeufe" : "") + ".csv", HP.monthCsv(home, rep, nameOf), "text/csv").catch(() => say("Die Datei liess sich nicht speichern.", "err"));
+    const print = () => {
+      document.body.classList.add("print-sheet");
+      const done = () => { document.body.classList.remove("print-sheet"); window.removeEventListener("afterprint", done); };
+      window.addEventListener("afterprint", done);
+      try { window.print(); } catch (e) { done(); }
+      setTimeout(done, 60000);
+    };
+    return html`
+      <${Sheet} title="Monatsabrechnung" onClose=${onClose} closeLabel="Fertig">
+        <div class="cal-nav month-nav">
+          <button type="button" class="icon-btn no-print" aria-label="Vorheriger Monat" onClick=${() => setYm(shiftYm(ym, -1))}><${Icon} n="back" /></button>
+          <h2 class="cal-m" aria-live="polite">${label}</h2>
+          <button type="button" class="icon-btn no-print" aria-label="Nächster Monat" disabled=${ym >= now} onClick=${() => setYm(shiftYm(ym, 1))}><${Icon} n="next" /></button>
+        </div>
+        <div class="seg no-print" role="tablist" aria-label="Was zählt?">
+          <button type="button" role="tab" aria-selected=${String(scope === "shop")} aria-pressed=${String(scope === "shop")} onClick=${() => setScope("shop")}>🛒 Einkäufe</button>
+          <button type="button" role="tab" aria-selected=${String(scope === "all")} aria-pressed=${String(scope === "all")} onClick=${() => setScope("all")}>Alle Ausgaben</button>
+        </div>
+        <p class="hint print-only">${home.name} · ${scope === "shop" ? "Einkäufe (Lebensmittel und Haushalt)" : "alle Ausgaben"}</p>
+        ${scope === "shop" && html`<p class="hint no-print">Einkäufe sind Buchungen der Kategorien «Lebensmittel» und «Haushalt».</p>`}
+        <section class="stub-card month-sum">
+          <div class="cell"><span class="eyebrow">Total ${base}</span><span class="fig">${HP.num(rep.total, base)}</span>
+            <span class="fig-note">${rep.count === 1 ? "1 Buchung" : rep.count + " Buchungen"}${rep.perDay ? " · " + HP.num(rep.perDay, base) + " pro Tag" : ""}</span></div>
+          <div class="cell"><span class="eyebrow">Vormonat</span><span class="fig">${HP.num(rep.prev, base)}</span>
+            <span class="fig-note">${diff == null ? HP.monthLabel(rep.prevYm) : (diff > 0 ? "+" : diff < 0 ? "−" : "±") + Math.abs(diff) + " % gegenüber " + HP.monthLabel(rep.prevYm)}</span></div>
+        </section>
+        ${rep.missing > 0 && html`<div class="note warn"><${Icon} n="swap" /><div>${rep.missing === 1 ? "Eine Buchung hat" : rep.missing + " Buchungen haben"} keinen Wechselkurs und ${rep.missing === 1 ? "fehlt" : "fehlen"} hier.</div></div>`}
+        ${!rep.count
+          ? html`<p>Im ${label} gibt es ${scope === "shop" ? "keine Einkäufe" : "keine Ausgaben"}. Einkäufe erfasst ihr in der Kasse oder auf der Einkaufsliste mit «Als Ausgabe erfassen».</p>`
+          : html`
+            ${rep.cats.length > 1 && html`
+              <div class="field">
+                <span class="label">Nach Kategorie</span>
+                <div class="bars">${rep.cats.map(c => html`
+                  <div class="bar" key=${c.cat}>
+                    <span class="bar-l"><span class="emo" aria-hidden="true">${HP.catEmoji(c.cat)}</span>${HP.catLabel(c.cat)}</span>
+                    <span class="bar-v">${HP.num(c.total, base)}<small>${Math.round(c.total / rep.total * 100)} %</small></span>
+                    <span class="bar-t" aria-hidden="true"><i class="bar-f" style=${"display:block;width:" + (c.total / catMax * 100).toFixed(2) + "%"}></i></span>
+                  </div>`)}
+                </div>
+              </div>`}
+            <div class="field">
+              <span class="label">Wer hat wie viel?</span>
+              <div class="mtable" role="table" aria-label="Bezahlt und Anteil je Person">
+                <div class="mrow mhead" role="row"><span role="columnheader">Person</span><span role="columnheader">Bezahlt</span><span role="columnheader">Anteil</span></div>
+                ${ids.map(id => html`
+                  <div class="mrow" role="row" key=${id}>
+                    <span role="cell" class="mwho"><${Av} m=${who(id)} s=${1} />${nameOf(id)}${id === meId ? " (ich)" : ""}</span>
+                    <span role="cell">${HP.num(rep.per[id].paid, base)}</span>
+                    <span role="cell">${HP.num(rep.per[id].share, base)}</span>
+                  </div>`)}
+              </div>
+            </div>
+            <section class="panel">
+              <div class="panel-head"><h2 class="sec-h">${rep.settled ? "✅ " + label + " ist abgerechnet" : "So ist der " + label + " quitt"}</h2></div>
+              ${rep.plan.payments.length > 0 && html`
+                <div>${rep.plan.payments.map(p => html`
+                  <div class="pay" key=${p.from + p.to}>
+                    <span class="pay-who"><span><${Av} m=${who(p.from)} s=${1} />${nameOf(p.from)}</span><${Icon} n="arrow" s=${16} /><span><${Av} m=${who(p.to)} s=${1} />${nameOf(p.to)}</span></span>
+                    <span class="pay-amt">${HP.money(p.amount, base)}</span>
+                    <button type="button" class="btn small no-print" disabled=${busy} onClick=${() => pay(p)}><${Icon} n="check" s=${16} />Als bezahlt eintragen</button>
+                  </div>`)}
+                </div>`}
+              ${rep.paid.length > 0 && html`<p class="hint">Bezahlt: ${rep.paid.map(t => nameOf(t.payer) + " → " + nameOf(t.to) + " " + HP.money(t.amount, base) + " am " + HP.fmtDate(t.date, { day: "numeric", month: "short" })).join(" · ")}</p>`}
+              <p class="hint">Die Zahlungen gelten nur für diesen Monat. In der Gesamtabrechnung der Kasse zählen sie wie jede andere Zahlung.</p>
+            </section>
+            <div class="field">
+              <span class="label">Buchungen (${rep.items.length})</span>
+              <div class="list">${rep.items.map(e => {
+                const s = HP.shares(e, home);
+                return html`
+                  <button type="button" class="x" key=${e.id} onClick=${() => open({ t: "expense", e })}>
+                    <span class="x-ic" aria-hidden="true">${HP.catEmoji(e.cat)}</span>
+                    <span class="x-main"><span class="x-t">${e.title || HP.catLabel(e.cat)}</span><span class="x-s">${HP.fmtDate(e.date, { weekday: "short", day: "numeric", month: "short" })} · ${nameOf(e.payer)}</span></span>
+                    <span class="x-amt">${s ? HP.num(s.total, base) : "?"}</span>
+                  </button>`;
+              })}</div>
+            </div>
+            <div class="btn-row no-print">
+              ${typeof navigator.share === "function" && html`<button type="button" class="btn small" onClick=${share}><${Icon} n="share" s=${16} />Teilen</button>`}
+              <button type="button" class="btn small" onClick=${copy}><${Icon} n="copy" s=${16} />Kopieren</button>
+              <button type="button" class="btn small" onClick=${csv}><${Icon} n="download" s=${16} />Tabelle (CSV)</button>
+              <button type="button" class="btn small" onClick=${print}><span class="emo" aria-hidden="true">🖨️</span>Drucken / PDF</button>
+            </div>
+            ${copyBox && html`
+              <div class="field">
+                <label for="hp-mcopy">Kopieren hat nicht geklappt. Markiere den Text und kopiere ihn von Hand.</label>
+                <textarea id="hp-mcopy" class="copybox" readonly value=${copyBox} onFocus=${e => e.target.select()}></textarea>
+              </div>`}`}
+      <//>`;
+  }
+
   const VIEWS = [["list", "Ausgaben"], ["settle", "Abrechnung"], ["stats", "Statistik"]];
   function Kasse({ ctx, view, setView }) {
     const { home, data, who, meId, members, open, say } = ctx;
@@ -568,6 +692,8 @@
       return sum;
     }, [home, expenses]);
     const base = home.base, my = meId && bal.per[meId] ? bal.per[meId].net : null;
+    /* Der Vormonat mit offenen Zahlungen, solange niemand ihn abgerechnet hat. */
+    const lastOpen = useMemo(() => { const r = HP.monthReport(home, expenses || [], shiftYm(HP.today().slice(0, 7), -1), "shop"); return r.open ? r : null; }, [home, expenses]);
     return html`
       <${U.TabHead} emoji="💰" title="Kasse" />
       <section class="stub-card">
@@ -583,6 +709,11 @@
           <p>Für eine gemeinsame Kasse braucht es mindestens zwei Personen. Füge die anderen in den Einstellungen des Haushalts hinzu.</p>
           <div><button type="button" class="btn small" onClick=${() => open({ t: "home-edit" })}><${Icon} n="sliders" s=${16} />Personen hinzufügen</button></div>
         </div></div>`}
+      <button type="button" class="book-coll month-card" onClick=${() => open({ t: "month" })}>
+        <span class="book-e" aria-hidden="true">🧾</span>
+        <span class="x-main"><span class="x-t">Monatsabrechnung</span><span class="x-s">${lastOpen ? HP.monthLabel(lastOpen.ym) + ": " + (lastOpen.open === 1 ? "1 Zahlung offen" : lastOpen.open + " Zahlungen offen") : "Einkäufe pro Monat, wer wie viel bezahlt hat, quitt pro Monat"}</span></span>
+        <${Icon} n="next" s=${18} />
+      </button>
       <div class="seg onbg" role="tablist" aria-label="Ansicht der Kasse">${VIEWS.map(([id, label]) => html`
         <button type="button" key=${id} role="tab" aria-selected=${String(view === id)} aria-pressed=${String(view === id)} onClick=${() => setView(id)}>${label}</button>`)}
       </div>
@@ -593,5 +724,5 @@
       ${view === "stats" && html`<${Stats} home=${home} expenses=${expenses} bal=${bal} who=${who} meId=${meId} nActive=${members.length} />`}`;
   }
 
-  Object.assign(U, { Kasse, ExpenseForm, TransferForm });
+  Object.assign(U, { Kasse, ExpenseForm, TransferForm, MonthSheet });
 })();

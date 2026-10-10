@@ -337,6 +337,67 @@ window.HP = (function () {
   }
   function netOf(bal) { var n = {}; for (var id in bal.per) n[id] = bal.per[id].net; return n; }
 
+  /* ---------- Monatsabrechnung ---------- */
+  /* Ein Monat für sich (ym "2026-10"): was gekauft wurde, nach Kategorie, wer wie viel bezahlt hat und wie gross der Anteil
+     jeder Person ist, und mit welchen Zahlungen dieser Monat quitt ist. scope "shop": nur Einkäufe (Lebensmittel und Haushalt),
+     sonst alle Ausgaben. Ausgleichszahlungen aus der Monatsabrechnung tragen den Monat (settles "2026-10" oder "2026-10:shop")
+     und zählen nur dort; in der Gesamtabrechnung sind sie gewöhnliche Zahlungen. */
+  var SHOP_CATS = ["groceries", "household"];
+  function monthTag(ym, scope) { return ym + (scope === "shop" ? ":shop" : ""); }
+  function monthReport(home, expenses, ym, scope) {
+    var all = expenses || [], tag = monthTag(ym, scope);
+    var items = all.filter(function (e) { return e.kind !== "transfer" && e.date && e.date.slice(0, 7) === ym && (scope !== "shop" || SHOP_CATS.indexOf(e.cat) >= 0); });
+    var paid = all.filter(function (e) { return e.kind === "transfer" && e.settles === tag; });
+    var bal = balances(home, items.concat(paid)), plan = settle(netOf(bal)), byCat = {}, cats = [];
+    items.forEach(function (e) {
+      var s = shares(e, home);
+      if (!s) return;
+      if (!byCat[e.cat]) { byCat[e.cat] = { cat: e.cat, total: 0, n: 0 }; cats.push(byCat[e.cat]); }
+      byCat[e.cat].total += s.total; byCat[e.cat].n++;
+    });
+    cats.sort(function (a, b) { return b.total - a.total; });
+    var py = +ym.slice(0, 4), pm = +ym.slice(5, 7) - 1;
+    if (pm < 1) { pm = 12; py--; }
+    var prevYm = py + "-" + pad(pm), prev = 0;
+    all.forEach(function (e) {
+      if (e.kind === "transfer" || !e.date || e.date.slice(0, 7) !== prevYm || (scope === "shop" && SHOP_CATS.indexOf(e.cat) < 0)) return;
+      var s = shares(e, home); if (s) prev += s.total;
+    });
+    items.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : (b.ts || 0) - (a.ts || 0); });
+    var days = daysInMonth(+ym.slice(0, 4), +ym.slice(5, 7)), now = today();
+    var elapsed = now.slice(0, 7) === ym ? +now.slice(8, 10) : now.slice(0, 7) > ym ? days : 0;
+    return { ym: ym, scope: scope === "shop" ? "shop" : "all", tag: tag, items: items, paid: paid, total: bal.total, count: bal.count, missing: bal.missing,
+      per: bal.per, plan: plan, cats: cats, prev: prev, prevYm: prevYm, perDay: elapsed ? Math.round(bal.total / elapsed) : 0,
+      settled: bal.count > 0 && !plan.payments.length && !bal.missing, open: plan.payments.length };
+  }
+  /* Die Abrechnung als Text für den Gruppenchat, und als Tabelle (CSV mit Semikolon, wie Excel in der Schweiz sie öffnet). */
+  function monthText(home, rep, nameOf) {
+    var b = home.base, L = ["Abrechnung " + monthLabel(rep.ym) + (rep.scope === "shop" ? " (Einkäufe)" : "") + " · " + home.name, "",
+      "Total: " + money(rep.total, b) + " (" + rep.count + (rep.count === 1 ? " Buchung" : " Buchungen") + ")"];
+    rep.cats.forEach(function (c) { L.push("  " + catLabel(c.cat) + ": " + money(c.total, b)); });
+    L.push("");
+    Object.keys(rep.per).forEach(function (id) {
+      var p = rep.per[id];
+      if (p.paid || p.share) L.push(nameOf(id) + ": bezahlt " + money(p.paid, b) + ", Anteil " + money(p.share, b));
+    });
+    L.push("");
+    if (rep.plan.payments.length) { L.push("So ist der Monat quitt:"); rep.plan.payments.forEach(function (p) { L.push("  " + nameOf(p.from) + " → " + nameOf(p.to) + ": " + money(p.amount, b)); }); }
+    else L.push(rep.count ? "Dieser Monat ist quitt." : "Keine Buchungen.");
+    return L.join("\n");
+  }
+  function monthCsv(home, rep, nameOf) {
+    var b = home.base, ids = memberIds(home, true), q = function (v) { v = String(v == null ? "" : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var rows = [["Datum", "Titel", "Kategorie", "Bezahlt von", "Betrag", "Währung", "Betrag " + b].concat(ids.map(function (id) { return "Anteil " + nameOf(id); }))];
+    rep.items.forEach(function (e) {
+      var s = shares(e, home);
+      rows.push([e.date, e.title, catLabel(e.cat), nameOf(e.payer), plain(e.amount, e.cur), e.cur, s ? plain(s.total, b) : ""].concat(ids.map(function (id) { return s && s.parts[id] ? plain(s.parts[id], b) : ""; })));
+    });
+    rows.push([]);
+    rows.push(["Total", "", "", "", "", "", plain(rep.total, b)].concat(ids.map(function (id) { return rep.per[id] ? plain(rep.per[id].share, b) : ""; })));
+    rows.push(["Bezahlt", "", "", "", "", "", ""].concat(ids.map(function (id) { return rep.per[id] ? plain(rep.per[id].paid, b) : ""; })));
+    return "\ufeff" + rows.map(function (r) { return r.map(q).join(";"); }).join("\r\n") + "\r\n";
+  }
+
   /* ---------- Statistik ---------- */
   /* period: "month" = laufender Kalendermonat, "year" = die letzten zwölf Monate, sonst alles. Gezeigt wird pro Monat. */
   function periodStart(period, now) {
@@ -748,7 +809,8 @@ window.HP = (function () {
     { id: "cheap", label: "Günstig", emoji: "💸" },
     { id: "kids", label: "Kinderliebling", emoji: "🧒" },
     { id: "guests", label: "Für Gäste", emoji: "🥂" },
-    { id: "prep", label: "Vorkochen", emoji: "📦" }
+    { id: "prep", label: "Vorkochen", emoji: "📦" },
+    { id: "glutenfree", label: "Glutenfrei", emoji: "🌾" }
   ];
   var tagT = table(RECIPE_TAGS, "vegi");
   /* Küchen des Rezeptbuchs, nach Weltgegend geordnet. Eigene Rezepte können auch eine Küche haben. */
@@ -756,7 +818,8 @@ window.HP = (function () {
     { id: "asien", label: "Asien", emoji: "🥢" },
     { id: "europa", label: "Europa", emoji: "🍷" },
     { id: "nahost", label: "Nahost & Nordafrika", emoji: "🧆" },
-    { id: "amerika", label: "Amerika", emoji: "🌮" }
+    { id: "amerika", label: "Amerika", emoji: "🌮" },
+    { id: "afrika", label: "Afrika", emoji: "🌍" }
   ];
   var KITCHENS = [
     { id: "th", label: "Thailändisch", emoji: "🇹🇭", region: "asien" },
@@ -776,7 +839,9 @@ window.HP = (function () {
     { id: "nord", label: "Skandinavien & Britische Inseln", emoji: "🐟", region: "europa" },
     { id: "levante", label: "Levante & Nahost", emoji: "🧆", region: "nahost" },
     { id: "maghreb", label: "Nordafrika", emoji: "🫖", region: "nahost" },
-    { id: "amerika", label: "Amerika & Mexiko", emoji: "🌮", region: "amerika" }
+    { id: "amerika", label: "USA & Kanada", emoji: "🍔", region: "amerika" },
+    { id: "latam", label: "Mexiko & Lateinamerika", emoji: "🌮", region: "amerika" },
+    { id: "afrika", label: "Afrika südlich der Sahara", emoji: "🌍", region: "afrika" }
   ];
   var kitT = table(KITCHENS, "ch");
   var regT = table(REGIONS, "europa");
@@ -797,6 +862,7 @@ window.HP = (function () {
      Eine gelöschte Notiz ist null. Ergebnis: Liste, die neuste zuerst. */
   function normNotes(v) {
     var out = [];
+    if (Array.isArray(v)) { var m = {}; v.forEach(function (x) { if (x && typeof x === "object" && okId(x.id)) m[x.id] = x; }); v = m; }   // aus einer Sicherung
     if (v && typeof v === "object" && !Array.isArray(v)) for (var k in v) {
       var x = v[k];
       if (!okId(k) || !x || typeof x !== "object" || out.length >= 200) continue;
@@ -807,6 +873,8 @@ window.HP = (function () {
     out.sort(function (a, b) { return b.at - a.at || (a.id < b.id ? 1 : -1); });
     return out.slice(0, 100);
   }
+  /* Für das Speichern: die Notizen wieder als Tabelle { Kennung: Notiz }. */
+  function notesMap(list) { var m = {}; (list || []).forEach(function (n) { m[n.id] = { text: n.text, mood: n.mood, tip: n.tip, by: n.by, at: n.at, d: n.d }; }); return m; }
   /* Wie kam ein Rezept an? Zählt die Stimmungen, nennt die letzte und die Tipps fürs nächste Mal. */
   function noteSummary(r) {
     var notes = (r && r.notes) || [], o = { top: 0, ok: 0, flop: 0, mood: "", tips: [] };
@@ -817,8 +885,241 @@ window.HP = (function () {
   function hasTag(r, tag) {
     if (tag === "quick") return r.tags.indexOf("quick") >= 0 || (r.time > 0 && r.time <= 30);
     if (tag === "vegi") return r.tags.indexOf("vegi") >= 0 || r.tags.indexOf("vegan") >= 0;
+    if (tag === "glutenfree") return r.tags.indexOf("glutenfree") >= 0 || traits(r).gf.level !== "contains";   // glutenfrei, auch mit einfachem Ersatz
     return r.tags.indexOf(tag) >= 0;
   }
+  /* ---------- Glutenfrei ---------- */
+  /* Aus den Zutaten abgeleitet: "free" (glutenfrei, wie es dasteht), "swap" (glutenfrei mit einfachem Ersatz aus Migros oder
+     Coop, etwa Tamari statt Sojasauce) oder "contains" (das Gericht lebt von Weizen, Gerste oder Dinkel). Dazu, was auf dem
+     Etikett zu prüfen ist. Wer ein eigenes Rezept als glutenfrei markiert, hat das letzte Wort. */
+  var GF_SAFE = /glutenfrei|reisnudel|glasnudel|reispapier|reismehl|maismehl|maisgriess|maisstärke|maizena|maistortilla|kichererbsenmehl|buchweizen|mandelmehl|kokosmehl|kartoffelstärke|kartoffelmehl|tamari|hirse|quinoa|polenta|teffmehl|erdnussbutter|reiswaffel/g;
+  var GF_HARD = /seitan|weizengriess|hartweizengriess|(?<![a-zäöü])griess|dinkel|roggen|gerste|graupen|freekeh|grünkern|zwieback|biscuit|wantan|gyoza|teigblätter|strudelteig|filoteig|yufka|naan|malzbier/;
+  var GF_SWAP = [
+    [/sojasauce|sojasosse|shoyu/, "Tamari (glutenfreie Sojasauce)"],
+    [/hoisin|austernsauce|kecap|maggi|würzsauce/, "glutenfreie Variante (Etikett prüfen)"],
+    [/gnocchi/, "glutenfreie Gnocchi"],
+    [/spätzli|knöpfli/, "glutenfreie Spätzli oder Teigwaren"],
+    [/mie-?nudel|udon|ramen|soba|yakisoba|eiernudel|weizennudel|chow.?mein/, "Reisnudeln"],
+    [/spaghetti|penne|teigwaren|pasta|nudel|hörnli|magronen|makkaroni|tagliatelle|linguine|fusilli|rigatoni|orzo|farfalle|ravioli|tortellini|lasagne|cannelloni|trofie|vermicelli|fadennudel/, "glutenfreie Teigwaren"],
+    [/paniermehl|panko|semmelbrösel|brösel/, "glutenfreies Paniermehl"],
+    [/tortilla|wrap/, "Maistortillas"],
+    [/couscous|bulgur/, "Quinoa oder Hirse"],
+    [/haferflocken|hafer/, "glutenfreie Haferflocken"],
+    [/(?<![a-zäöü])bier/, "glutenfreies Bier"],
+    [/malzessig/, "Weinessig"],
+    [/blätterteig|kuchenteig|pizzateig|mürbeteig|wähenteig|flammkuchenteig|teig(?!waren)/, "glutenfreier Fertigteig (Free From bei Coop, aha! bei Migros)"],
+    [/brot|baguette|toast|pita|brötchen|weggli|ciabatta|zopf|brioche|croissant|bagel|burger-bun|bun(?![a-zäöü])|crouton/, "glutenfreies Brot"]
+  ];
+  var GF_CHECK = /bouillon|brühe|fond(?![a-zäöü])|miso|gochujang|currypaste|worcestershire|backpulver|würze|sweet.?chili/;
+  var MEHL = /(?<![a-zäöü])(weiss|halbweiss|ruch|zopf|pizza|weizen|knöpfli|spätzli|dinkel)?mehl(?![a-zäöü])/;   // nicht "mehligkochend", nicht "Paniermehl"
+  function glutenIn(t) {
+    if (GF_HARD.test(t) || MEHL.test(t)) return true;
+    for (var i = 0; i < GF_SWAP.length; i++) if (GF_SWAP[i][0].test(t)) return true;
+    return false;
+  }
+  function glutenOf(r) {
+    var out = { level: "free", swaps: [], checks: [], hits: [] };
+    if (r.tags && r.tags.indexOf("glutenfree") >= 0) return out;
+    (r.ingr || []).forEach(function (line) {
+      var low = line.toLowerCase(), t = low.replace(GF_SAFE, " ");
+      if (/glutenfrei/.test(low)) return;
+      var q = splitQty(line), name = q.name.toLowerCase().replace(GF_SAFE, " ");
+      /* "Reis oder Naan": eine glutenfreie Wahl steht schon da */
+      if (/\soder\s/.test(t) && t.split(/\soder\s/).some(function (alt) { return !glutenIn(alt); })) return;
+      var side = /zum servieren|nach belieben|zum dippen|als beilage|dazu(?![a-zäöü])/.test(t);
+      if (GF_HARD.test(t)) { if (side) out.swaps.push({ line: line, tip: "weglassen oder eine glutenfreie Beilage" }); else out.hits.push(line); return; }
+      if (MEHL.test(name)) {
+        var m = /^(\d+(?:[.,]\d+)?)\s*(g|kg|dl|l)?/i.exec(q.qty), n = m ? Number(m[1].replace(",", ".")) : 0, u = m && m[2] ? m[2].toLowerCase() : "";
+        var big = u === "kg" || u === "l" || (u === "g" && n >= 100) || (u === "dl" && n >= 1);
+        if (big && !side) out.hits.push(line); else out.swaps.push({ line: line, tip: "Maizena oder glutenfreies Mehl" });
+        return;
+      }
+      for (var i = 0; i < GF_SWAP.length; i++) if (GF_SWAP[i][0].test(t)) { out.swaps.push({ line: line, tip: GF_SWAP[i][1] }); return; }
+      if (GF_CHECK.test(t)) out.checks.push(q.name.replace(/\(.*?\)/g, "").split(",")[0].trim());
+    });
+    out.level = out.hits.length ? "contains" : out.swaps.length ? "swap" : "free";
+    return out;
+  }
+  var GF_LABEL = { free: "Glutenfrei", swap: "Glutenfrei mit Ersatz", contains: "Enthält Gluten" };
+
+  /* ---------- Merkmale für Filter und Menü-Finder ---------- */
+  /* Hauptzutat, Zubereitung, Schärfe, ohne Milchprodukte: aus Zutaten und Schritten abgeleitet, damit auch eigene und
+     übernommene Rezepte gefunden werden. Nicht unfehlbar, aber für eine Auswahl gut genug. */
+  var MAINS = [
+    { id: "poulet", label: "Poulet", emoji: "🍗" }, { id: "rind", label: "Rind & Kalb", emoji: "🥩" }, { id: "schwein", label: "Schwein", emoji: "🥓" },
+    { id: "lamm", label: "Lamm", emoji: "🐑" }, { id: "fisch", label: "Fisch", emoji: "🐟" }, { id: "meer", label: "Meeresfrüchte", emoji: "🦐" },
+    { id: "tofu", label: "Tofu", emoji: "🧈" }, { id: "huelsen", label: "Hülsenfrüchte", emoji: "🫘" }, { id: "ei", label: "Eier", emoji: "🥚" },
+    { id: "kaese", label: "Käse", emoji: "🧀" }, { id: "gemuese", label: "Gemüse", emoji: "🥦" },
+    { id: "pasta", label: "Pasta & Nudeln", emoji: "🍝" }, { id: "reis", label: "Reis", emoji: "🍚" }, { id: "kartoffel", label: "Kartoffeln", emoji: "🥔" }
+  ];
+  var mainT = table(MAINS, "gemuese");
+  var MAIN_RE = [
+    ["lamm", /(?<![a-zäöü])lamm/], ["poulet", /poulet|huhn|hühner|chicken|truthahn|trute|ente(?![a-zäöü])|entenbrust/],
+    ["schwein", /schwein|speck|schinken|wurst|würst|wienerli|cervelat|salsiz|chorizo|pancetta|guanciale|bacon|spareribs|salami|lardons|prosciutto|mortadella/],
+    ["rind", /rind|kalb|beef|entrecôte|siedfleisch|voressen|hackfleisch|hack(?![a-zäöü])/], ["meer", /crevette|garnele|gamba|scampi|muschel|vongole|calamar|tintenfisch|krake|oktopus|jakobsmuschel/],
+    ["fisch", /lachs|thon|thunfisch|kabeljau|forelle|egli|zander|dorsch|seelachs|felchen|sardine|makrele|dorade|wolfsbarsch|heilbutt|fisch(?!sauce)/],
+    ["tofu", /tofu|tempeh|seitan/], ["huelsen", /linsen|kichererbse|(?<!grüne |breite )bohnen|kidney|edamame|dal(?![a-zäöü])/]
+  ];
+  var BASE_RE = [["pasta", /spaghetti|penne|teigwaren|pasta|nudel|hörnli|magronen|makkaroni|lasagne|gnocchi|tagliatelle|linguine|fusilli|rigatoni|orzo|ravioli|tortellini|spätzli|ramen|udon|cannelloni|trofie/],
+    ["reis", /reis(?!essig|wein|papier|mehl|nudel)|risotto|basmati|jasmin/], ["kartoffel", /kartoffel|rösti|härdöpfel|süsskartoffel/]];
+  var traitCache = typeof WeakMap === "function" ? new WeakMap() : null;
+  function traits(r) {
+    if (traitCache && traitCache.has(r)) return traitCache.get(r);
+    var lines = (r.ingr || []).filter(function (l) { return !isStaple(l); }), mains = [], i;
+    var heavy = lines.filter(function (l) { return !/^\s*(\d+(?:[.,]\d+)?\s*)?(el|tl|prise|msp)\b/i.test(splitQty(l).qty + " ") || /fleisch|filet|brust|schenkel/i.test(l); });
+    var sweet = r.cat === "sweet";
+    for (i = 0; i < heavy.length && mains.length < 2 && !sweet; i++) {
+      var low = heavy[i].toLowerCase().split(/\soder\s/)[0];
+      for (var k = 0; k < MAIN_RE.length; k++) if (MAIN_RE[k][1].test(low)) { if (mains.indexOf(MAIN_RE[k][0]) < 0) mains.push(MAIN_RE[k][0]); break; }   // je Zeile die erste Art
+    }
+    var eggs = 0, cheese = 0;
+    lines.forEach(function (l) {
+      var low = l.toLowerCase(), q = splitQty(l), n = parseFloat(String(q.qty).replace(",", ".")) || 0;
+      if (/(^|[^a-zäöü])(eier|ei)([^a-zäöü]|$)/.test(q.name.toLowerCase())) eggs += n || 1;
+      if (/käse|gruyère|raclette|mozzarella|feta|halloumi|paneer|vacherin|emmentaler|appenzeller|cheddar|ricotta|burrata/.test(low) && /\bg\b/.test(q.qty)) cheese += n;
+    });
+    var vegi = hasTag(r, "vegi") || !mains.some(function (m) { return ["lamm", "poulet", "schwein", "rind", "meer", "fisch"].indexOf(m) >= 0; });
+    if ((!mains.length || vegi) && !sweet) {
+      if (eggs >= 3 || r.emoji === "ei") mains.push("ei");
+      if (cheese >= 150 || r.emoji === "kaese" || r.emoji === "fondue") mains.push("kaese");
+    }
+    if (!sweet) BASE_RE.forEach(function (b) { if (heavy.some(function (l) { var x = l.toLowerCase(); return b[1].test(x.split(/\soder\s/)[0]) && !/zum servieren|nach belieben/.test(x); })) mains.push(b[0]); });
+    if (vegi && !sweet && r.cat !== "breakfast" && !mains.some(function (m) { return ["tofu", "huelsen", "ei", "kaese"].indexOf(m) >= 0; })) mains.push("gemuese");
+    var steps = (r.steps || []).join(" ").toLowerCase(), ingr = lines.join(" ").toLowerCase();
+    var methods = [];
+    if (/ofen|backen|gratinier|überbacken|blech/.test(steps)) methods.push("ofen");
+    if (/pfanne|wok/.test(steps)) methods.push("pfanne");
+    if (!/ofen|back|brat|koch|köchel|sied|schmor|dünst|dämpf|röst|grill|pfanne|wok|erhitz|frittier|karamel|schmelz|blanchier|garen|gar /.test(steps)) methods.push("roh");
+    var spicy = lines.some(function (l) { var low = l.toLowerCase(); return /chili|sambal|gochujang|harissa|sriracha|cayenne|jalape|peperoncino|currypaste|pul biber|piri|tabasco|scharf/.test(low) && !/prise|nach belieben|optional|mild|sweet.?chili|süss|senf/.test(low); });
+    var plant = ingr.replace(/(kokos|hafer|soja|mandel|reis|erbsen|cashew|dinkel)[- ]?(milch|rahm|joghurt|drink)|erdnussbutter|mandelbutter|pflanzenbutter|kakaobutter|butternut|butterbohnen/g, " ");
+    var df = hasTag(r, "vegan") || !/milch|rahm|butter|käse|joghurt|jogurt|quark|mascarpone|ricotta|ghee|crème fraîche|creme fraiche|sauerrahm|mozzarella|parmesan|pecorino|gruyère|feta|halloumi|paneer|labneh|schmand|sbrinz|emmentaler|raclette|vacherin|cheddar|burrata/.test(plant);
+    /* Deftig oder leicht: Rahm, Käse, Speck, Butter, Teig, Frittiertes zählen; Salate und klare Suppen sind leicht. */
+    var rich = 0;
+    [/rahm|crème fraîche|mascarpone|sauerrahm|schmand/, /käse|gruyère|raclette|parmesan|mozzarella|emmentaler|vacherin|cheddar/, /speck|wurst|würst|bacon|pancetta|guanciale|schweinsbauch/,
+      /butter(?!milch)/, /teig|paniermehl|panko/, /kartoffelstock|pommes|rösti/].forEach(function (re) { if (re.test(plant)) rich++; });
+    if (/frittier|ausbacken|im öl schwimmend/.test(steps)) rich++;
+    var light = rich === 0 && (r.cat === "salad" || r.cat === "soup" || mains.indexOf("gemuese") >= 0 || mains.indexOf("fisch") >= 0) || (rich <= 1 && r.cat === "salad");
+    var out = { mains: mains, methods: methods, spicy: spicy, df: df, gf: glutenOf(r), rich: rich, light: light, hearty: rich >= 2 };
+    if (traitCache) traitCache.set(r, out);
+    return out;
+  }
+
+  /* ---------- Filter ---------- */
+  /* f: { q, regions, kitchens, cats, diet ("vegi", "vegan", "gf", "gfstrict", "df"), time (höchstens Minuten), mains, methods,
+     tags ("cheap", "kids", "guests", "prep"), coll, spicy ("mild" | "hot"), mood ("light" | "hearty"), src ("own" | "book"), sort }.
+     Innerhalb einer Gruppe genügt eines (Poulet oder Fisch), zwischen den Gruppen gilt alles (Poulet und schnell). */
+  var DIETS = [{ id: "vegi", label: "Vegi", emoji: "🥦" }, { id: "vegan", label: "Vegan", emoji: "🌱" }, { id: "gf", label: "Glutenfrei", emoji: "🌾" },
+    { id: "gfstrict", label: "Glutenfrei ohne Ersatz", emoji: "🌾" }, { id: "df", label: "Ohne Milchprodukte", emoji: "🥛" }];
+  var METHODS = [{ id: "ofen", label: "Aus dem Ofen", emoji: "🔥" }, { id: "pfanne", label: "Pfanne & Wok", emoji: "🍳" }, { id: "roh", label: "Ohne Herd", emoji: "🥗" }];
+  var TIMES = [15, 30, 45, 60];
+  var SORTS = [["match", "Passend"], ["time", "Schnellste zuerst"], ["rating", "Beliebteste"], ["az", "A–Z"]];
+  function emptyFilter() { return { q: "", regions: [], kitchens: [], cats: [], diet: [], time: 0, mains: [], methods: [], tags: [], coll: "", spicy: "", mood: "", src: "", sort: "match" }; }
+  function filterCount(f) {
+    if (!f) return 0;
+    return ["regions", "kitchens", "cats", "diet", "mains", "methods", "tags"].reduce(function (n, k) { return n + ((f[k] || []).length); }, 0) +
+      (f.time ? 1 : 0) + (f.coll ? 1 : 0) + (f.spicy ? 1 : 0) + (f.mood ? 1 : 0) + (f.src ? 1 : 0);
+  }
+  function anyOf(list, test) { return !list || !list.length || list.some(test); }
+  function dietOk(r, d, t) {
+    if (d === "vegi") return hasTag(r, "vegi");
+    if (d === "vegan") return hasTag(r, "vegan");
+    if (d === "gf") return r.tags.indexOf("glutenfree") >= 0 || t.gf.level !== "contains";
+    if (d === "gfstrict") return r.tags.indexOf("glutenfree") >= 0 || t.gf.level === "free";
+    if (d === "df") return t.df;
+    return true;
+  }
+  function recipeFits(r, f) {
+    var t = traits(r);
+    if (f.src === "own" && r.idea) return false;
+    if (f.src === "book" && !r.idea) return false;
+    if (f.coll && (r.coll || []).indexOf(f.coll) < 0) return false;
+    if (f.kitchens && f.kitchens.length) { if (f.kitchens.indexOf(r.kitchen) < 0) return false; }
+    else if (!anyOf(f.regions, function (g) { return r.kitchen && kitT.get(r.kitchen).region === g; })) return false;
+    if (!anyOf(f.cats, function (c) { return r.cat === c; })) return false;
+    if (!(f.diet || []).every(function (d) { return dietOk(r, d, t); })) return false;
+    if (f.time && !(r.time > 0 && r.time <= f.time)) return false;
+    if (!anyOf(f.mains, function (m) { return t.mains.indexOf(m) >= 0; })) return false;
+    if (!anyOf(f.methods, function (m) { return t.methods.indexOf(m) >= 0; })) return false;
+    if (!(f.tags || []).every(function (g) { return hasTag(r, g); })) return false;
+    if (f.spicy === "hot" && !t.spicy) return false;
+    if (f.spicy === "mild" && t.spicy) return false;
+    if (f.mood === "light" && !t.light) return false;
+    if (f.mood === "hearty" && !t.hearty) return false;
+    return true;
+  }
+  function liked(r) { var s = noteSummary(r); return (s.top * 2 + s.ok) - s.flop * 3 + (r.fav ? 2 : 0) + Math.min(r.n || 0, 5) * 0.3; }
+  function filterRecipes(list, f) {
+    var words = searchWords(f.q), out = [];
+    (list || []).forEach(function (r) {
+      if (!recipeFits(r, f)) return;
+      var m = recipeMatch(r, words);
+      if (words.length && !m.score) return;
+      out.push({ r: r, hits: m.hits, score: m.score });
+    });
+    var by = f.sort || "match";
+    out.sort(function (a, b) {
+      if (by === "time") return (a.r.time || 999) - (b.r.time || 999) || a.r.title.localeCompare(b.r.title, "de");
+      if (by === "az") return a.r.title.localeCompare(b.r.title, "de");
+      if (by === "rating") return liked(b.r) - liked(a.r) || a.r.title.localeCompare(b.r.title, "de");
+      return b.score - a.score || (a.r.idea ? 1 : 0) - (b.r.idea ? 1 : 0) || liked(b.r) - liked(a.r) || a.r.title.localeCompare(b.r.title, "de");
+    });
+    return out;
+  }
+
+  /* ---------- Menü-Finder ---------- */
+  /* p: { time, regions, kitchens, coll, mains, diet, mood ("light" | "hearty"), spicy, guests, kids, fridge, cats }.
+     Was nicht passt, fällt weg; der Rest bekommt Punkte: Zutaten aus dem Kühlschrank, Bewertungen und Ähnlichkeit mit
+     dem, was euch geschmeckt hat, Abwechslung (zuletzt Gekochtes und schon Eingeplantes rutscht nach hinten).
+     h: { today, planned: [Rezept-Kennungen der nächsten Tage] }. Ergebnis mit Begründung. seed mischt Gleichstände. */
+  function suggest(pool, p, h, seed) {
+    p = p || {}; h = h || {};
+    var now = h.today || today(), words = searchWords(p.fridge), planned = h.planned || [];
+    var loved = (pool || []).filter(function (r) { var s = noteSummary(r); return s.mood === "top" || r.fav; });
+    var lovedK = {}, lovedM = {}, lovedC = {};
+    loved.forEach(function (r) { var t = traits(r); if (r.kitchen) lovedK[r.kitchen] = 1; t.mains.forEach(function (m) { lovedM[m] = 1; }); (r.coll || []).forEach(function (c) { lovedC[c] = 1; }); });
+    var cats = p.cats && p.cats.length ? p.cats : ["main"];
+    var f = { regions: p.regions || [], kitchens: p.kitchens || [], coll: p.coll || "", cats: cats, diet: p.diet || [], time: 0, mains: p.mains || [], methods: [], tags: [], spicy: p.spicy || "", mood: "" };
+    var out = [];
+    (pool || []).forEach(function (r) {
+      if (noteSummary(r).mood === "flop") return;
+      if (!recipeFits(r, f)) return;
+      var t = traits(r), sc = 0, why = [];
+      if (p.time) { if (r.time > p.time) return; if (!r.time) sc -= 2; else { sc += 1.5 * (1 - r.time / p.time); why.push(r.time + " Min."); } }
+      var m = recipeMatch(r, words);
+      if (words.length) { if (!m.score) sc -= 1; else { sc += m.score * 3; why.push("mit " + m.hits.join(", ")); } }
+      if (p.mood === "light") { if (t.light) { sc += 2; why.push("leicht"); } else if (t.hearty) sc -= 2; }
+      if (p.mood === "hearty") { if (t.hearty) { sc += 2; why.push("deftig"); } else if (t.light) sc -= 1; }
+      if (p.guests) { if (hasTag(r, "guests")) { sc += 2.5; why.push("für Gäste"); } }
+      if (p.kids) { if (hasTag(r, "kids")) { sc += 2.5; why.push("Kinderliebling"); } if (t.spicy) sc -= 2; }
+      var s = noteSummary(r);
+      if (s.top) { sc += 3; why.push("euch hat es geschmeckt"); } else if (s.ok) sc += 0.5;
+      if (r.fav) { sc += 2; why.push("Favorit"); }
+      if (!s.top && !r.fav && loved.length) {
+        var like = (r.kitchen && lovedK[r.kitchen] ? 1 : 0) + (r.coll || []).filter(function (c) { return lovedC[c]; }).length * 1.5 + t.mains.filter(function (x) { return lovedM[x]; }).length * 0.5;
+        if (like >= 1.5) { sc += Math.min(2.5, like); why.push("ähnlich wie eure Favoriten"); }
+      }
+      if (r.last) { var d = dayDiff(r.last, now); if (d <= 7) sc -= 4; else if (d <= 14) sc -= 2; else if (d <= 21) sc -= 0.5; }
+      if (planned.indexOf(r.id) >= 0) sc -= 5;
+      if ((p.diet || []).indexOf("gf") >= 0) why.push(t.gf.level === "swap" ? "glutenfrei mit Ersatz" : "glutenfrei");
+      sc += ((hash(r.id + "|" + (seed || now)) % 1000) / 1000) * 1.2;          // Abwechslung bei Gleichstand
+      out.push({ r: r, score: sc, why: why });
+    });
+    out.sort(function (a, b) { return b.score - a.score; });
+    return out;
+  }
+  /* Ein ganzes Menü: zum Hauptgang eine Vorspeise (Suppe, Salat oder Apéro) und ein Dessert, möglichst aus derselben
+     Weltgegend; zu einem deftigen Hauptgang eine leichte Vorspeise. */
+  function menuFor(pool, main, p, h, seed) {
+    var region = main.kitchen ? kitT.get(main.kitchen).region : "", hearty = traits(main).hearty;
+    var base = { diet: p.diet || [], kids: p.kids, guests: p.guests, fridge: p.fridge };
+    function pick(cats, mood) {
+      var near = suggest(pool, Object.assign({}, base, { cats: cats, regions: region ? [region] : [], mood: mood }), h, seed);
+      if (!near.length) near = suggest(pool, Object.assign({}, base, { cats: cats, mood: mood }), h, seed);
+      return near.length ? near[0].r : null;
+    }
+    return { starter: pick(["soup", "salad", "snack"], hearty ? "light" : ""), main: main, dessert: pick(["sweet"], hearty ? "light" : "") };
+  }
+
   /* Grundvorrat, den man fast immer zu Hause hat: wird beim Übertragen auf die Einkaufsliste zuerst abgewählt. */
   var STAPLE = /^(salz|pfeffer|salz,? pfeffer.*|muskat|zucker|mehl|öl|olivenöl|rapsöl|bratbutter|essig|wasser|oregano|paprikapulver|kreuzkümmel|backpulver|zimt|chilipulver|bouillon|gemüsebouillon)$/i;
   function isStaple(line) {
@@ -979,7 +1280,7 @@ window.HP = (function () {
       if (Array.isArray(a)) aisles[st.id] = a.filter(function (x) { return shopT.has(x); }).slice(0, 20);
     });
     return { id: id, name: text(d.name, 80).trim() || "Haushalt", base: d.base, rates: rates, members: members, created: num0(d.created),
-      store: storeOf(d.store) ? d.store : "", aisles: aisles, calV: intIn(d.calV, 0, 9999999, 0) };
+      store: storeOf(d.store) ? d.store : "", aisles: aisles, calV: intIn(d.calV, 0, 9999999, 0), gf: d.gf === true };
   }
   function normExpense(id, d) {
     if (!d || typeof d !== "object" || !posNum(d.amount) || typeof d.cur !== "string" || !/^[A-Z]{3}$/.test(d.cur)) return null;
@@ -989,7 +1290,7 @@ window.HP = (function () {
       rate: okRate(d.rate) ? d.rate : null, rateAuto: d.rateAuto === true, rateDate: validDate(d.rateDate) ? d.rateDate : "",
       date: validDate(d.date) ? d.date : "", cat: isCat(d.cat) ? d.cat : "other", payer: d.payer,
       by: okId(d.by) ? d.by : null, ts: num0(d.ts), up: num0(d.up) };
-    if (e.kind === "transfer") { if (!okId(d.to)) return null; e.to = d.to; return e; }
+    if (e.kind === "transfer") { if (!okId(d.to)) return null; e.to = d.to; e.settles = typeof d.settles === "string" && /^\d{4}-\d{2}(:shop)?$/.test(d.settles) ? d.settles : ""; return e; }
     e.mode = ["equal", "shares", "exact", "items"].indexOf(d.mode) >= 0 ? d.mode : "equal";
     e.for = idList(d.for);
     if (e.mode === "shares" || e.mode === "exact") {
@@ -1065,12 +1366,16 @@ window.HP = (function () {
     allocate: allocate, memberIds: memberIds, weights: weights, rateFor: rateFor, shares: shares, preview: preview,
     balances: balances, settle: settle, netOf: netOf, stats: stats, niceMax: niceMax, awards: awards,
     summaryText: summaryText, check: check, normHome: normHome, normExpense: normExpense,
+    SHOP_CATS: SHOP_CATS, monthReport: monthReport, monthTag: monthTag, monthText: monthText, monthCsv: monthCsv,
     AVATARS: AVATARS, isAvatar: isAvatar, avatar: avatar, avatarFor: avatarFor, pickAvatar: pickAvatar, meme: meme, memeTotal: memeTotal, EXACT_MAX: EXACT_MAX, MAX_MINOR: MAX_MINOR,
     SHOP: SHOP, shopSec: shopT.get, shopGuess: shopGuess, splitQty: splitQty, normItem: normItem,
     EV_CATS: EV_CATS, evCat: evT.get, REPEATS: REPEATS, occurrences: occurrences, eventCheck: eventCheck, normEvent: normEvent,
     PLANTS: PLANTS, isPlantEmoji: isPlantEmoji, plantEmoji: plantEmoji, plantDue: plantDue, feedDue: feedDue, careFields: careFields, normPlant: normPlant,
     INFO_CATS: INFO_CATS, infoCat: infoT.get, okUrl: okUrl, dueOf: dueOf, normInfo: normInfo,
-    MOODS: MOODS, mood: moodT.get, isMood: moodT.has, noteSummary: noteSummary,
+    glutenOf: glutenOf, GF_LABEL: GF_LABEL, MAINS: MAINS, main: mainT.get, traits: traits,
+    DIETS: DIETS, METHODS: METHODS, TIMES: TIMES, SORTS: SORTS, emptyFilter: emptyFilter, filterCount: filterCount, recipeFits: recipeFits, filterRecipes: filterRecipes,
+    suggest: suggest, menuFor: menuFor,
+    MOODS: MOODS, mood: moodT.get, isMood: moodT.has, noteSummary: noteSummary, notesMap: notesMap,
     REGIONS: REGIONS, region: regT.get, KITCHENS: KITCHENS, kitchen: kitT.get, isKitchen: kitT.has, COLLECTIONS: COLLECTIONS, collection: collT.get, isCollection: collT.has,
     DISHES: DISHES, isDish: isDish, dishEmoji: dishEmoji, RECIPE_CATS: RECIPE_CATS, recipeCat: recT.get, RECIPE_TAGS: RECIPE_TAGS, recipeTag: tagT.get, hasTag: hasTag,
     durations: durations, secsLabel: secsLabel, stepIngredients: stepIngredients, STORES: STORES, storeOf: storeOf, aisleOrder: aisleOrder,

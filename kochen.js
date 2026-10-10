@@ -182,6 +182,7 @@
           ${i === 0 && html`
             <section class="cook-card">
               <h2 class="cook-h">Zuerst bereitstellen</h2>
+              ${ctx.home.gf && U.GlutenBox && html`<${U.GlutenBox} ctx=${ctx} r=${r} />`}
               ${tips.length > 0 && html`
                 <div class="note tipnote"><span class="emo" aria-hidden="true">💡</span><div class="stack">
                   <p><strong>Vom letzten Mal</strong></p>

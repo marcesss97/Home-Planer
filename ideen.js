@@ -45,7 +45,7 @@ window.HP_IDEEN = [
       "Spinat unterrühren, bis er zusammenfällt. Mit Limettensaft und Salz abschmecken, mit Koriander und Reis servieren."]
   },
   {
-    id: "idee-chili-sin-carne", title: "Chili sin Carne", kitchen: "amerika", emoji: "chili", cat: "main", tags: ["vegan", "cheap", "prep"], time: 45, serves: 4,
+    id: "idee-chili-sin-carne", title: "Chili sin Carne", kitchen: "latam", emoji: "chili", cat: "main", tags: ["vegan", "cheap", "prep"], time: 45, serves: 4,
     ingr: ["1 Zwiebel", "2 Knoblauchzehen", "2 Peperoni", "1 Dose Kidneybohnen (400 g)", "1 Dose schwarze Bohnen (400 g)", "1 Dose Mais (300 g)", "2 Dosen gehackte Tomaten (à 400 g)", "2 EL Tomatenpüree", "1 TL Kreuzkümmel", "1 TL Paprikapulver, geräuchert", "1 Chilischote oder Chilipulver", "2 EL Olivenöl", "Reis oder Brot zum Servieren"],
     steps: ["Zwiebel und Knoblauch hacken, Peperoni würfeln und alles im Olivenöl andünsten.",
       "Tomatenpüree und Gewürze dazugeben und kurz mitrösten.",
@@ -109,7 +109,7 @@ window.HP_IDEEN = [
       "Mit gerösteten Kürbiskernen servieren."]
   },
   {
-    id: "idee-bohnen-tacos", title: "Bohnen-Tacos", kitchen: "amerika", emoji: "taco", cat: "main", tags: ["vegi", "quick", "kids"], time: 25, serves: 4,
+    id: "idee-bohnen-tacos", title: "Bohnen-Tacos", kitchen: "latam", emoji: "taco", cat: "main", tags: ["vegi", "quick", "kids"], time: 25, serves: 4,
     ingr: ["8 kleine Tortillas", "1 Dose schwarze Bohnen (400 g)", "1 Dose Mais (300 g)", "1 rote Zwiebel", "2 Tomaten", "1 Avocado", "1 Limette", "100 g Reibkäse (z. B. Cheddar)", "1 TL Kreuzkümmel", "Salsa, Sauerrahm, Koriander"],
     steps: ["Bohnen abspülen und mit Mais und Kreuzkümmel in einer Pfanne erwärmen, leicht zerdrücken.",
       "Zwiebel, Tomaten und Avocado würfeln, Avocado mit Limettensaft beträufeln.",
@@ -148,7 +148,7 @@ window.HP_IDEEN = [
       "Reis in Schalen verteilen, alles darauf anrichten und mit Sesam und Frühlingszwiebeln bestreuen."]
   },
   {
-    id: "idee-fajitas", title: "Poulet-Fajitas", kitchen: "amerika", emoji: "fladen", cat: "main", tags: ["quick", "kids"], time: 30, serves: 4,
+    id: "idee-fajitas", title: "Poulet-Fajitas", kitchen: "latam", emoji: "fladen", cat: "main", tags: ["quick", "kids"], time: 30, serves: 4,
     ingr: ["500 g Pouletbrust", "2 Peperoni (rot und gelb)", "1 Zwiebel", "8 Tortillas", "2 EL Öl", "1 TL Paprikapulver", "1 TL Kreuzkümmel", "1 Limette", "Guacamole, Sauerrahm, Salsa"],
     steps: ["Poulet in Streifen schneiden und mit Öl, Gewürzen und Limettensaft marinieren.",
       "Peperoni und Zwiebel in Streifen schneiden.",
