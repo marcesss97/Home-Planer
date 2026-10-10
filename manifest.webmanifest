@@ -1,7 +1,7 @@
 {
   "name": "Home-Planer",
   "short_name": "Home-Planer",
-  "description": "Euer Haushalt an einem Ort: gemeinsame Kasse, Einkaufsliste, Kalender, Giessplan für die Pflanzen und wichtige Infos.",
+  "description": "Euer Haushalt an einem Ort: gemeinsame Kasse, Einkaufsliste, Rezepte und Kochideen, Kalender, Giessplan für die Pflanzen und wichtige Infos.",
   "lang": "de-CH",
   "start_url": "./",
   "scope": "./",

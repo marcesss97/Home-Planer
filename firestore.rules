@@ -16,7 +16,7 @@ service cloud.firestore {
 
       match /{part}/{docId} {
         allow read, write: if homeId.size() >= 16
-          && part in ['expenses', 'shopping', 'events', 'plants', 'infos'];
+          && part in ['expenses', 'shopping', 'events', 'plants', 'infos', 'recipes'];
       }
     }
 

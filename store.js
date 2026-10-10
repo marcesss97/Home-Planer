@@ -2,8 +2,8 @@
    Zwei Wege mit derselben Schnittstelle:
    "local" = nur dieses Gerät (localStorage),
    "cloud" = Firebase Firestore: Live-Sync für den Haushalt, schreibt auch ohne Netz und gleicht später ab.
-   Ein Haushalt ist ein Dokument (Name, Personen, Währung) mit fünf Bereichen darunter: Kasse, Einkaufsliste, Kalender,
-   Pflanzen und Infos. Jeder Eintrag ist ein eigenes Dokument, damit gleichzeitige Änderungen sich nicht überschreiben.
+   Ein Haushalt ist ein Dokument (Name, Personen, Währung) mit sechs Bereichen darunter: Kasse, Einkaufsliste, Kalender,
+   Pflanzen, Infos und Rezepte. Jeder Eintrag ist ein eigenes Dokument, damit gleichzeitige Änderungen sich nicht überschreiben.
    Welche Haushalte dieses Gerät kennt, steht im Verzeichnis ("registry"). */
 window.HPStore = (function () {
   "use strict";
@@ -17,8 +17,8 @@ window.HPStore = (function () {
   var configState = !RAW || typeof RAW !== "object" ? "broken" : cloudOn ? "on" : CFG ? "incomplete" : "off";
 
   /* Die Bereiche eines Haushalts und wie ihre Einträge gelesen werden. */
-  var COLS = ["expenses", "shopping", "events", "plants", "infos"];
-  var NORM = { expenses: HP.normExpense, shopping: HP.normItem, events: HP.normEvent, plants: HP.normPlant, infos: HP.normInfo };
+  var COLS = ["expenses", "shopping", "events", "plants", "infos", "recipes"];
+  var NORM = { expenses: HP.normExpense, shopping: HP.normItem, events: HP.normEvent, plants: HP.normPlant, infos: HP.normInfo, recipes: HP.normRecipe };
   function okCol(col) { return COLS.indexOf(col) >= 0; }
 
   /* Lässt der Browser überhaupt etwas speichern? Im privaten Modus oder mit gesperrten Website-Daten nicht. */

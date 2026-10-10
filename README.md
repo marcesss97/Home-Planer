@@ -1,12 +1,13 @@
 # Home-Planer
 
-Euer Haushalt an einem Ort, als Web-App fürs Handy: gemeinsame Kasse, Einkaufsliste, Kalender, Giessplan für die Pflanzen und wichtige Infos wie Mietvertrag und Versicherungen. Die App läuft im Browser, lässt sich aufs Handy legen und startet auch ohne Netz. Gebaut auf der Grundlage der Ferienkasse ([Splite-weiser](https://github.com/marcesss97/Splite-weiser)): gleiches Aussehen, gleicher Gruppen-Sync, gleiche Bedienung.
+Euer Haushalt an einem Ort, als Web-App fürs Handy: gemeinsame Kasse, Einkaufsliste, Rezepte und Kochideen, Kalender, Giessplan für die Pflanzen und wichtige Infos wie Mietvertrag und Versicherungen. Die App läuft im Browser, lässt sich aufs Handy legen und startet auch ohne Netz. Gebaut auf der Grundlage der Ferienkasse ([Splite-weiser](https://github.com/marcesss97/Splite-weiser)): gleiches Aussehen, gleicher Gruppen-Sync, gleiche Bedienung.
 
 | Bereich | Was er kann |
 |---|---|
-| 🏠 **Start** | Was heute ansteht (Termine, durstige Pflanzen, Fristen), die nächsten Tage, die Einkaufsliste zum schnellen Ergänzen und das eigene Saldo der Kasse |
+| 🏠 **Start** | Was heute ansteht (Termine, geplantes Essen, durstige Pflanzen, Fristen), eine Kochidee, die nächsten Tage, die Einkaufsliste zum schnellen Ergänzen und das eigene Saldo der Kasse |
 | 💰 **Kasse** | Wer hat was bezahlt, wer schuldet wem? Aufteilen gleich, nach Anteilen, nach Beträgen oder nach Positionen; Abrechnung mit möglichst wenigen Zahlungen; Statistik pro Monat und Kategorie; fremde Währungen zum Tageskurs |
 | 🛒 **Einkauf** | Eine Zeile genügt («2 Liter Milch»); jeder Artikel landet von selbst in seiner Abteilung. Abhaken im Laden, Abgehaktes mit einem Tipp wieder auf die Liste, und danach «Als Ausgabe erfassen» |
+| 🍳 **Rezepte** | Eure Rezeptsammlung und 26 eingebaute Kochideen. «Was koche ich heute?» würfelt eine Idee, die Suche findet Rezepte zu dem, was im Kühlschrank ist. Auf andere Portionen umrechnen, Zutaten mit einem Tipp auf die Einkaufsliste, Wochenplan mit «Wer kocht?» |
 | 📅 **Kalender** | Monatsansicht und «Demnächst». Termine über mehrere Tage, mit Uhrzeit, wiederkehrend (wöchentlich, alle 2 Wochen, monatlich, jährlich), einzelne Wiederholungen streichbar. Arten wie Abfuhr, Geburtstag, Besuch, Ferien |
 | 🪴 **Pflanzen** | Jede Pflanze mit ihrem Rhythmus. Die durstigsten zuerst, ein Tipp auf 💧 notiert, wer heute gegossen hat. Düngen, Raum, Zuständigkeit und Verlauf |
 | 📁 **Infos** | Mietvertrag, Versicherungen, Abos, Kontakte, WLAN, Entsorgung: Vorlagen mit den üblichen Feldern, Kopieren mit einem Tipp, Telefonnummern zum Antippen, Links zu Dokumenten, Fristen mit Erinnerung in der Übersicht |
@@ -41,6 +42,8 @@ Mit dem Gruppen-Sync trägt jede Person auf dem eigenen Handy ein, alle sehen di
 2. Den vorhandenen Text ganz löschen, den ganzen Inhalt der Datei [`firestore.rules`](firestore.rules) aus diesem Repository einfügen und «Publish» wählen.
 3. Den Home-Planer öffnen, oben rechts das Regler-Symbol, «Verbindung prüfen». Steht dort «Die Verbindung steht», ist alles bereit.
 
+Wer die Regeln schon einmal eingesetzt hat, bevor es die Rezepte gab: bitte nochmals den aktuellen Inhalt von `firestore.rules` veröffentlichen. Sonst lehnt Firebase das Speichern von Rezepten ab.
+
 Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft danach weiter wie bisher. Bis die Regeln veröffentlicht sind, meldet der Home-Planer beim Anlegen eines Haushalts «Der Gruppen-Sync hat das Speichern abgelehnt».
 
 **Lieber ein eigenes Firebase-Projekt?** Dann wie bei der Ferienkasse: Projekt anlegen, Firestore-Datenbank erstellen (Standort zum Beispiel `europe-west6 (Zürich)`, «Production mode»), die Regeln aus `firestore.rules` einsetzen, unter «Project settings» eine Web-App registrieren und den Block `const firebaseConfig = { … };` in `config.js` ersetzen. Die App führt unter «Gruppen-Sync einrichten» Schritt für Schritt durch, mit Knopf zum Kopieren der Regeln. Ohne Gruppen-Sync (`const firebaseConfig = null;`) liegt jeder Haushalt nur auf dem Gerät, auf dem er angelegt wurde.
@@ -59,15 +62,18 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 1. Einstellungen, «Verbindung prüfen»: Es erscheint «Die Verbindung steht».
 2. Haushalt anlegen, oben «Einladen», das zweite Handy öffnet den Link oder scannt den QR-Code. Beide tippen auf das Fragezeichen auf dem Band und wählen ihren Namen.
 3. Ein Handy setzt «Milch» auf die Einkaufsliste, das andere hakt sie ab. Beides erscheint ohne Neuladen auf dem anderen Handy.
-4. Eine Pflanze eintragen und auf 💧 tippen: Auf dem anderen Handy steht «Gegossen».
-5. Ein Handy in den Flugmodus, eine Ausgabe eintragen, Flugmodus aus: Die Ausgabe erscheint drüben.
-6. Probe-Haushalt wieder löschen: Regler-Symbol im Haushalt, «Haushalt für alle löschen».
+4. Unter «Rezepte» eine Kochidee öffnen, «Übernehmen» und «Einplanen»: Das Rezept und das geplante Essen erscheinen auf dem anderen Handy.
+5. Eine Pflanze eintragen und auf 💧 tippen: Auf dem anderen Handy steht «Gegossen».
+6. Ein Handy in den Flugmodus, eine Ausgabe eintragen, Flugmodus aus: Die Ausgabe erscheint drüben.
+7. Probe-Haushalt wieder löschen: Regler-Symbol im Haushalt, «Haushalt für alle löschen».
 
 ## Die Bereiche im Detail
 
 **Kasse.** Wie in der Ferienkasse: Betrag, Kategorie, wer bezahlt hat, wie aufgeteilt wird. «Anteile» passt, wenn ein Zimmer grösser ist; «Positionen» für Kassenzettel, auf denen nicht alles allen gehört. Unter «Abrechnung» steht, wer wem wie viel zahlt, mit möglichst wenigen Zahlungen; «Als bezahlt eintragen» gleicht aus. Die Statistik zeigt diesen Monat, die letzten zwölf Monate oder alles, nach Kategorie und pro Monat, dazu Stempel wie «Kühlschrankfüller». Fremde Währungen (etwa ein Einkauf in Konstanz) werden zum Tageskurs der EZB umgerechnet; der Kurs wird mit der Buchung gespeichert und lässt sich von Hand überschreiben.
 
 **Einkaufsliste.** Mengen gehen gleich mit: «3 Joghurt», «Äpfel 1kg», «500 g Hackfleisch». Die Abteilung errät die App aus einem Stichwortverzeichnis (Milch, Käse & Eier · Brot · Getränke · Drogerie …); ein Tipp auf den Artikel ändert sie. Abgehakte Artikel warten unter «Im Wagen». Beim nächsten Mal genügt es, ein paar Buchstaben zu tippen: Abgehaktes erscheint als Vorschlag und kommt mit einem Tipp zurück auf die Liste. «Erledigte löschen» räumt auf.
+
+**Rezepte und Kochideen.** Ganz oben würfelt «Was koche ich heute?» eine Idee aus euren Rezepten und den eingebauten Kochideen; Filter für Vegi, Schnell und Günstig, und was in den letzten Tagen gekocht wurde, kommt nicht dran. Das Suchfeld nimmt auch mehrere Zutaten («Zucchetti, Feta») und zeigt, welche Rezepte dazu passen. Ein Rezept rechnet die Zutaten auf beliebig viele Portionen um. «Auf die Einkaufsliste» setzt die angekreuzten Zutaten mit Menge auf die Liste, in die richtige Abteilung und mit dem Vermerk «für …»; Grundvorrat wie Salz, Öl oder Bouillon ist dabei schon abgewählt, und was schon auf der Liste steht, kommt nicht doppelt. Eine Kochidee wird mit «Übernehmen» zu eurem eigenen Rezept, das ihr anpassen könnt. Eigene Rezepte: Zutaten und Schritte je eine Zeile, dazu Zeit, Portionen, Merkmale, Link zum Original, Favoriten und «Heute gekocht». Der **Wochenplan** zeigt die nächsten sieben Tage; ein geplantes Essen ist ein Termin der Art «Essen» und steht deshalb auch im Kalender und auf «Start», mit «Marc kocht».
 
 **Kalender.** Ein Tipp auf einen Tag zeigt seine Termine; «Demnächst» listet die nächsten 30 Tage, jeden Termin einmal. Bei der Art «Abfuhr» ist «Jede Woche» schon gewählt, bei «Geburtstag» «Jedes Jahr». Fällt eine Abfuhr wegen eines Feiertags aus, öffnet man sie an diesem Tag und wählt «Nur am … ausfallen lassen». Monatliche Termine am 29. bis 31. fallen in kürzeren Monaten aus, wie in den gängigen Kalendern.
 
@@ -88,7 +94,7 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 
 ## Sicherung
 
-- Herunterladen: im Haushalt das Regler-Symbol, dann «Sicherung herunterladen». Es entsteht eine Datei wie `homeplaner-wg-seefeld-2026-10-10.json` mit Kasse, Einkaufsliste, Kalender, Pflanzen und Infos.
+- Herunterladen: im Haushalt das Regler-Symbol, dann «Sicherung herunterladen». Es entsteht eine Datei wie `homeplaner-wg-seefeld-2026-10-10.json` mit Kasse, Einkaufsliste, Rezepten, Kalender, Pflanzen und Infos.
 - Einlesen: Startseite, Einstellungen, «Sicherung einlesen». Die Sicherung wird als neuer Haushalt auf diesem Gerät angelegt und lässt sich danach über «Einladen» für alle freigeben.
 - Für Haushalte, die nur auf einem Gerät liegen, ist die Sicherung der einzige Schutz.
 
@@ -102,7 +108,8 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 
 - Eine Datei ändern: auf GitHub öffnen, Stift, ändern, «Commit changes». Nach etwa einer Minute ist die neue Fassung veröffentlicht; die App holt sie beim nächsten Start mit Netz.
 - Name und Farben: `manifest.webmanifest`, `index.html` und der Anfang von `style.css` (Farben als Variablen, hell und dunkel).
-- Kategorien der Kasse, Abteilungen und Stichwörter der Einkaufsliste, Arten von Terminen, Pflanzenbilder, Vorlagen der Infos und Avatare: in `logic.js`.
+- Kategorien der Kasse, Abteilungen und Stichwörter der Einkaufsliste, Arten von Terminen, Pflanzenbilder, Vorlagen der Infos, Bilder und Merkmale der Rezepte und Avatare: in `logic.js`.
+- Die eingebauten Kochideen: in `ideen.js`. Eine eigene Idee ist ein weiterer Eintrag nach demselben Muster.
 
 | Datei | Aufgabe |
 |---|---|
@@ -110,8 +117,9 @@ Die neuen Regeln enthalten den Bereich der Ferienkasse unverändert; sie läuft 
 | `config.js` | Einstellungen dieser Installation (Gruppen-Sync) |
 | `app.js` | Hülle: Liste der Haushalte, Übersicht, Navigation, Einladen, Einstellungen |
 | `ui.js` | Gemeinsame Bausteine der Oberfläche |
-| `kasse.js`, `einkauf.js`, `kalender.js`, `pflanzen.js`, `infos.js` | Die fünf Bereiche |
-| `logic.js` | Rechnen und Prüfen: Aufteilen, Ausgleich, Statistik, Wiederholungen, Giessplan, Lesen gespeicherter Daten |
+| `kasse.js`, `einkauf.js`, `rezepte.js`, `kalender.js`, `pflanzen.js`, `infos.js` | Die sechs Bereiche |
+| `ideen.js` | Die eingebauten Kochideen |
+| `logic.js` | Rechnen und Prüfen: Aufteilen, Ausgleich, Statistik, Wiederholungen, Giessplan, Portionen umrechnen, Lesen gespeicherter Daten |
 | `store.js` | Speichern auf dem Gerät und im Gruppen-Sync |
 | `rates.js` | Tageskurse |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png`, `favicon.svg` | Installierbare App, Start ohne Netz |
@@ -131,8 +139,8 @@ node tests/e2e.test.js            # die ganze App in Chromium, mit nachgebautem 
 
 Geprüft, automatisch und wiederholbar:
 
-- Die Rechenlogik mit Tausenden Zufallsfällen: Aufteilen auf den Rappen genau, Salden und Abrechnung (alle sind danach quitt, höchstens so viele Zahlungen wie nötig), Lesen von Beträgen, Statistik pro Monat, Wiederholungen im Kalender gegen eine Nachzählung Tag für Tag, Giessplan, Abteilungen und Mengen der Einkaufsliste, und der Umgang mit unsinnigen oder manipulierten Daten (etwa Links mit `javascript:`).
-- Die ganze App in Chromium in 20 Schritten: Haushalt anlegen, jeder Bereich mit seinen Formularen, Neuladen, Zurück-Taste, Personen und Avatare, Sicherung herunterladen und einlesen, Löschen, schmale Handys mit 320 Pixeln. Der Gruppen-Sync mit einem nachgebauten Firestore-Server und zwei getrennten Handys: beitreten, Einträge erscheinen gegenseitig, gleichzeitige Änderungen, für alle löschen, fehlende Regeln, fehlende Datenbank, einen Haushalt vom Gerät freigeben. Dazu ein Start mit der echten Firebase-Bibliothek ohne Netz.
+- Die Rechenlogik mit Tausenden Zufallsfällen: Aufteilen auf den Rappen genau, Salden und Abrechnung (alle sind danach quitt, höchstens so viele Zahlungen wie nötig), Lesen von Beträgen, Statistik pro Monat, Wiederholungen im Kalender gegen eine Nachzählung Tag für Tag, Giessplan, Abteilungen und Mengen der Einkaufsliste, Portionen umrechnen, Suche nach Zutaten, Vollständigkeit aller Kochideen, und der Umgang mit unsinnigen oder manipulierten Daten (etwa Links mit `javascript:`).
+- Die ganze App in Chromium in 21 Schritten: Haushalt anlegen, jeder Bereich mit seinen Formularen (bei den Rezepten: würfeln, Portionen, Einkaufsliste, übernehmen, einplanen, Kühlschrank-Suche), Neuladen, Zurück-Taste, Personen und Avatare, Sicherung herunterladen und einlesen, Löschen, schmale Handys mit 320 Pixeln. Der Gruppen-Sync mit einem nachgebauten Firestore-Server und zwei getrennten Handys: beitreten, Einträge (auch Rezepte) erscheinen gegenseitig, gleichzeitige Änderungen, für alle löschen, fehlende Regeln, fehlende Datenbank, einen Haushalt vom Gerät freigeben. Dazu ein Start mit der echten Firebase-Bibliothek ohne Netz.
 
 Nicht geprüft, weil es von hier aus nicht möglich war:
 

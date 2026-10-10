@@ -38,12 +38,15 @@
   function EventRow({ o, ctx, showDate }) {
     const e = o.e, cat = HP.evCat(e.cat), who = e.who.map(ctx.who).filter(m => !m.gone);
     const today = HP.today();
+    /* A planned meal: the recipe's picture, who cooks, and a tap opens the recipe. */
+    const rec = e.cat === "meal" && e.rid && U.findRecipe ? U.findRecipe(ctx, e.rid) : null;
+    const when = e.cat === "meal" ? (who.length ? who.map(m => m.name).join(" & ") + (who.length > 1 ? " kochen" : " kocht") : "Essen") + (e.time ? " · " + e.time : "") : timeText(o);
     return html`
-      <button type="button" class="x" onClick=${() => ctx.open({ t: "event", e, at: o.start })}>
-        <span class=${"x-ic ev-" + cat.id} aria-hidden="true">${cat.emoji}</span>
+      <button type="button" class="x" onClick=${() => (rec ? ctx.open({ t: "recipe", id: rec.id, plan: e.id }) : ctx.open({ t: "event", e, at: o.start }))}>
+        <span class=${"x-ic ev-" + cat.id} aria-hidden="true">${rec ? HP.dishEmoji(rec.emoji) : cat.emoji}</span>
         <span class="x-main">
           <span class="x-t">${e.title}</span>
-          <span class="x-s">${showDate ? (o.date === today ? "Heute" : HP.dayLabel(o.date)) + " · " : ""}${timeText(o)}${e.repeat !== "none" ? " · " + REP_SHORT[e.repeat] : ""}</span>
+          <span class="x-s">${showDate ? (o.date === today ? "Heute" : HP.dayLabel(o.date)) + " · " : ""}${when}${e.repeat !== "none" ? " · " + REP_SHORT[e.repeat] : ""}</span>
         </span>
         ${who.length > 0 && html`<span class="avs mini" aria-label=${"Betrifft " + who.map(m => m.name).join(", ")}>${who.slice(0, 3).map(m => html`<${Av} key=${m.id} m=${m} s=${1} />`)}</span>`}
       </button>`;
@@ -104,7 +107,7 @@
           : html`<p>Keine Termine an diesem Tag.</p>`}
       </section>
       ${events && !events.length
-        ? html`<${Empty} emoji="🗓️" title="Noch keine Termine" text="Trag ein, was alle wissen sollten: die Kehrichtabfuhr jede Woche, Geburtstage, Besuch, Ferien oder wer wann putzt. Wiederkehrendes trägst du nur einmal ein." />`
+        ? html`<${Empty} emoji="🗓️" title="Noch keine Termine" text="Trag ein, was alle wissen sollten: die Kehrichtabfuhr jede Woche, Geburtstage, Besuch, Ferien oder wer wann putzt. Wiederkehrendes trägst du nur einmal ein. Geplantes Essen aus den Rezepten erscheint hier auch." />`
         : events && html`
           <section class="stack">
             <h2 class="aisle"><span class="emo" aria-hidden="true">🔜</span>Demnächst<span class="aisle-n">nächste 30 Tage</span></h2>
@@ -131,7 +134,7 @@
     const body = () => ({
       id: ev ? ev.id : docId("e"), title: d.title.trim().slice(0, 100), cat: d.cat, date: d.date, end: d.end && d.end !== d.date ? d.end : "",
       time: d.time || "", endTime: d.time && d.endTime ? d.endTime : "", repeat: d.repeat, until: d.repeat !== "none" ? d.until || "" : "",
-      who: d.who, note: d.note.trim().slice(0, 1000), skip: ev && d.repeat !== "none" ? ev.skip : [],
+      who: d.who, note: d.note.trim().slice(0, 1000), skip: ev && d.repeat !== "none" ? ev.skip : [], rid: ev ? ev.rid : null,
       by: ev ? ev.by : meId || null, ts: ev ? ev.ts : Date.now(), up: Date.now()
     });
     const save = () => run(async () => {

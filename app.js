@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   var root = document.getElementById("app"), P = window.htmPreact, HP = window.HP, Store = window.HPStore, U = window.HPUI;
-  if (!P || !HP || !Store || !window.HPRates || !U || !U.Kasse || !U.Shopping || !U.Calendar || !U.Plants || !U.Infos) {
+  if (!P || !HP || !Store || !window.HPRates || !U || !U.Kasse || !U.Shopping || !U.Calendar || !U.Plants || !U.Infos || !U.Recipes) {
     var bs = document.getElementById("boot-status");
     if (bs) bs.textContent = "Der Home-Planer konnte nicht geladen werden. Prüf die Verbindung und lade die Seite neu.";
     return;
@@ -126,7 +126,7 @@
           <h1><span class="logo" aria-hidden="true">🏡</span><span class="word">Home-Planer</span></h1>
           <button type="button" class="icon-btn" aria-label="Einstellungen" onClick=${onSettings}><${Icon} n="sliders" s=${22} /></button>
         </div>
-        <p>Kasse, Einkauf, Kalender, Pflanzen und Infos für euren Haushalt.</p>
+        <p>Kasse, Einkauf, Rezepte, Kalender, Pflanzen und Infos für euren Haushalt.</p>
       </header>
       ${!Store.storageOk && html`<div class="note warn" role="alert"><${Icon} n="device" /><div>Dieser Browser lässt nichts speichern (privater Modus oder gesperrte Website-Daten). Haushalte gehen verloren, sobald du die Seite schliesst. Öffne den Home-Planer in einem gewöhnlichen Fenster.</div></div>`}
       <${InstallHint} onHow=${onInstall} />
@@ -157,6 +157,7 @@
             <ul class="feat">
               <li><span class="x-ic k-rent" aria-hidden="true">💰</span>Gemeinsame Kasse: wer was bezahlt hat und wer wem wie viel schuldet</li>
               <li><span class="x-ic k-groceries" aria-hidden="true">🛒</span>Eine Einkaufsliste, die im Laden für alle gleich aussieht</li>
+              <li><span class="x-ic k-food" aria-hidden="true">🍳</span>Rezepte, Kochideen und ein Wochenplan, Zutaten mit einem Tipp auf die Liste</li>
               <li><span class="x-ic k-internet" aria-hidden="true">📅</span>Gemeinsamer Kalender mit Abfuhr, Geburtstagen und Besuch</li>
               <li><span class="x-ic k-household" aria-hidden="true">🪴</span>Giessplan: welche Pflanze heute dran ist und wer zuletzt gegossen hat</li>
               <li><span class="x-ic k-utilities" aria-hidden="true">📁</span>Infos wie Mietvertrag, Versicherungen und WLAN, mit Fristen</li>
@@ -582,7 +583,7 @@
             <button type="button" class="btn block" onClick=${onLeave}>Von diesem Gerät entfernen</button>
             <p class="meta">Für die anderen bleibt der Haushalt bestehen. Mit dem Einladungslink kommst du wieder dazu.</p>`}
           <${DeleteButton} label=${mode === "cloud" ? "Haushalt für alle löschen" : "Haushalt löschen"} onConfirm=${onDelete} disabled=${!!loading} />
-          <p class="meta">Löschen entfernt den Haushalt mit Kasse, Einkaufsliste, Kalender, Pflanzen und Infos${mode === "cloud" ? ", für alle" : ""}.</p>
+          <p class="meta">Löschen entfernt den Haushalt mit Kasse, Einkaufsliste, Rezepten, Kalender, Pflanzen und Infos${mode === "cloud" ? ", für alle" : ""}.</p>
         </div>
       <//>`;
   }
@@ -664,6 +665,8 @@
         <span class=${"x-a" + (n <= 14 ? " neg" : "")}><span>${HP.relDays(n)}</span></span>
       </button>`;
     const nToday = nowEv.length + thirsty.length + urgent.length;
+    /* No meal planned for today: an idea from the recipes, the same all day. */
+    const idea = useMemo(() => (nowEv.some(o => o.e.cat === "meal") ? null : U.dailyIdea(ctx)), [nowEv, data.recipes, home.id]);
     return html`
       <section class="ticket">
         <div class="ticket-main">
@@ -708,6 +711,19 @@
               ${urgent.map(dlRow)}
             </div>`}
       </section>
+      ${idea && html`
+        <section class="panel">
+          <div class="panel-head"><h2 class="sec-h">Kochidee für heute</h2><button type="button" class="btn ghost small" onClick=${() => onTab("recipes")}>Rezepte<${Icon} n="next" s=${16} /></button></div>
+          <div class="list flat">
+            <div class="x row-act">
+              <button type="button" class="x-in" onClick=${() => open({ t: "recipe", id: idea.id })}>
+                <span class=${"x-ic rc-" + idea.cat} aria-hidden="true">${HP.dishEmoji(idea.emoji)}</span>
+                <span class="x-main"><span class="x-t">${idea.title}</span><span class="x-s">${U.recipeMeta(idea)}</span></span>
+              </button>
+              <button type="button" class="btn small" onClick=${() => open({ t: "meal", rid: idea.id })}>Einplanen</button>
+            </div>
+          </div>
+        </section>`}
       ${(soonEv.length > 0 || soonPl.length > 0 || later.length > 0) && html`
         <section class="panel">
           <div class="panel-head"><h2 class="sec-h">Nächste Tage</h2><button type="button" class="btn ghost small" onClick=${() => onTab("cal")}>Kalender<${Icon} n="next" s=${16} /></button></div>
@@ -728,6 +744,7 @@
         <div class="panel-head"><h2 class="sec-h">Schnell erfassen</h2></div>
         <div class="quick-grid">
           <button type="button" class="qa" onClick=${() => open({ t: "expense" })}><span class="emo" aria-hidden="true">💸</span>Ausgabe</button>
+          <button type="button" class="qa" onClick=${() => open({ t: "recipe-edit" })}><span class="emo" aria-hidden="true">🍳</span>Rezept</button>
           <button type="button" class="qa" onClick=${() => open({ t: "event", date: today })}><span class="emo" aria-hidden="true">📅</span>Termin</button>
           <button type="button" class="qa" onClick=${() => open({ t: "plant" })}><span class="emo" aria-hidden="true">🪴</span>Pflanze</button>
           <button type="button" class="qa" onClick=${() => open({ t: "info-edit" })}><span class="emo" aria-hidden="true">📁</span>Info</button>
@@ -736,8 +753,8 @@
   }
 
   /* ---------- a household ---------- */
-  const TABS = [["home", "Start", "🏠"], ["kasse", "Kasse", "💰"], ["shop", "Einkauf", "🛒"], ["cal", "Kalender", "📅"], ["plants", "Pflanzen", "🪴"], ["infos", "Infos", "📁"]];
-  const FAB = { kasse: ["Ausgabe", { t: "expense" }], cal: ["Termin", null], plants: ["Pflanze", { t: "plant" }], infos: ["Eintrag", { t: "info-edit" }] };
+  const TABS = [["home", "Start", "🏠"], ["kasse", "Kasse", "💰"], ["shop", "Einkauf", "🛒"], ["recipes", "Rezepte", "🍳"], ["cal", "Kalender", "📅"], ["plants", "Pflanzen", "🪴"], ["infos", "Infos", "📁"]];
+  const FAB = { kasse: ["Ausgabe", { t: "expense" }], recipes: ["Rezept", { t: "recipe-edit" }], cal: ["Termin", null], plants: ["Pflanze", { t: "plant" }], infos: ["Eintrag", { t: "info-edit" }] };
   function HomeView({ ctx, tab, setTab, kview, setKview, onBack, setMe, note }) {
     const { data, open } = ctx;
     const [pick, setPick] = useState(false);
@@ -769,6 +786,7 @@
         ${tab === "home" && html`<${Overview} ctx=${ctx} onTab=${pickTab} pick=${pick} setPick=${setPick} setMe=${setMe} />`}
         ${tab === "kasse" && html`<${U.Kasse} ctx=${ctx} view=${kview} setView=${setKview} />`}
         ${tab === "shop" && html`<${U.Shopping} ctx=${ctx} />`}
+        ${tab === "recipes" && html`<${U.Recipes} ctx=${ctx} />`}
         ${tab === "cal" && html`<${U.Calendar} ctx=${ctx} />`}
         ${tab === "plants" && html`<${U.Plants} ctx=${ctx} />`}
         ${tab === "infos" && html`<${U.Infos} ctx=${ctx} />`}
@@ -1089,6 +1107,15 @@
         else if (s.t === "transfer") sheetEl = html`<${U.TransferForm} key=${s.k} home=${h} transfer=${s.e || null} preset=${s.preset} meId=${meId} act=${act} onClose=${close} say=${say} />`;
         else if (s.t === "item") sheetEl = html`<${U.ItemSheet} key=${s.k} ctx=${ctx} it=${findIn("shopping", s.it.id, s.it)} onClose=${close} />`;
         else if (s.t === "event") sheetEl = html`<${U.EventForm} key=${s.k} ctx=${ctx} ev=${s.e ? findIn("events", s.e.id, s.e) : null} date=${s.date} at=${s.at} onClose=${close} />`;
+        else if (s.t === "recipe") {
+          const r = U.findRecipe(ctx, s.id);
+          if (r) sheetEl = html`<${U.RecipeView} key=${s.k} ctx=${ctx} r=${r} plan=${s.plan} onClose=${close} />`;
+        }
+        /* Editing a recipe that was open leads back to it; a new one opens once it is saved. */
+        else if (s.t === "recipe-edit") sheetEl = html`<${U.RecipeForm} key=${s.k} ctx=${ctx} r=${s.r ? findIn("recipes", s.r.id, s.r) : null}
+          onClose=${deleted => (s.r && !deleted ? setSheet({ t: "recipe", id: s.r.id, k: newId() }) : close())}
+          onSaved=${id => setSheet({ t: "recipe", id, k: newId() })} />`;
+        else if (s.t === "meal") sheetEl = html`<${U.MealSheet} key=${s.k} ctx=${ctx} date=${s.date} rid=${s.rid} onClose=${close} />`;
         else if (s.t === "plant") sheetEl = html`<${U.PlantForm} key=${s.k} ctx=${ctx} p=${s.p ? findIn("plants", s.p.id, s.p) : null} onClose=${close} />`;
         else if (s.t === "info") {
           const info = findIn("infos", s.info.id, null);

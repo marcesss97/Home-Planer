@@ -554,8 +554,8 @@ window.HP = (function () {
     bakery: "brot zopf gipfeli weggli brötchen toast baguette ciabatta croissant kuchen tortilla wrap fladen",
     dairy: "milch käse joghurt jogurt yoghurt butter rahm quark mozzarella parmesan gruyère feta eier mascarpone ricotta hüttenkäse crème creme fraîche fraiche skyr",
     meat: "fleisch poulet huhn hähnchen rind schwein hack wurst cervelat salami schinken speck lachs thon fisch crevetten steak filet plätzli bratwurst geschnetzeltes",
-    pantry: "pasta teigwaren spaghetti nudeln penne hörnli reis risotto mehl zucker salz pfeffer öl olivenöl essig gewürz konserve bohnen linsen kichererbsen sauce sosse ketchup senf mayo honig konfi marmelade müesli muesli haferflocken cornflakes kaffee tee bouillon tomatenpüree passata nüsse mandeln couscous quinoa tofu hefe backpulver",
-    frozen: "tiefkühl glace pizza pommes eiswürfel",
+    pantry: "pasta teigwaren spaghetti nudeln penne hörnli reis risotto mehl zucker salz pfeffer öl olivenöl essig gewürz konserve bohnen linsen kichererbsen sauce sosse ketchup senf mayo honig konfi marmelade müesli muesli haferflocken cornflakes kaffee tee bouillon tomatenpüree passata nüsse mandeln couscous quinoa tofu hefe backpulver sesam kokosmilch currypaste maizena tortilla",
+    frozen: "tiefkühl glace pizza pommes eiswürfel edamame",
     drinks: "wasser mineral saft apfelsaft orangensaft bier wein rotwein weisswein prosecco cola eistee sirup limonade rivella kombucha milchdrink",
     sweets: "schoggi schokolade chips guetzli keks bonbon gummibär snack popcorn riegel praline nutella",
     care: "shampoo duschgel seife zahnpasta zahnbürste deo sonnencreme taschentücher watte rasier tampons binden windeln pflaster medikament dafalgan handcreme bodylotion",
@@ -569,13 +569,15 @@ window.HP = (function () {
     for (var i = 0; i < SHOP_INDEX.length; i++) if (t.indexOf(SHOP_INDEX[i].w) >= 0) return SHOP_INDEX[i].sec;
     return "other";
   }
+  /* Zahlen und Einheiten in Mengenangaben, auch aus Rezepten ("1/2 TL", "½ Bund", "1-2 Zehen"). */
+  var NUM = "(?:\\d+\\/\\d+|\\d+(?:[.,]\\d+)?(?:\\s*[-–]\\s*\\d+(?:[.,]\\d+)?)?|[½¼¾⅓⅔])";
+  var UNIT = "(?:x|stk\\.?|stück|kg|kilo|g|gramm|l|liter|dl|cl|ml|el|tl|msp|prise|prisen|pack|packung|päckli|paket|pkg\\.?|dose|dosen|flasche|flaschen|bund|beutel|glas|becher|rolle|rollen|schachtel|tube|zehe|zehen|scheibe|scheiben|stange|stangen|zweig|zweige|handvoll|kopf|knolle)";
   /* "2 Liter Milch", "Milch 2l", "3x Joghurt": eine Mengenangabe am Anfang oder am Ende wird abgetrennt. */
   function splitQty(input) {
     var s = String(input || "").trim().replace(/\s+/g, " ");
-    var unit = "(?:x|stk\\.?|stück|kg|kilo|g|gramm|l|liter|dl|cl|ml|pack|packung|päckli|paket|pkg\\.?|dose|dosen|flasche|flaschen|bund|beutel|glas|becher|rolle|rollen|schachtel|tube)";
-    var m = new RegExp("^(\\d+(?:[.,]\\d+)?\\s*" + unit + "?)\\s+(.+)$", "i").exec(s);
+    var m = new RegExp("^(" + NUM + "\\s*" + UNIT + "?)\\s+(.+)$", "i").exec(s);
     if (m) return { name: m[2], qty: m[1].replace(/\s+/g, " ") };
-    m = new RegExp("^(.+?)\\s+(\\d+(?:[.,]\\d+)?\\s*" + unit + ")$", "i").exec(s);
+    m = new RegExp("^(.+?)\\s+(" + NUM + "\\s*" + UNIT + ")$", "i").exec(s);
     if (m) return { name: m[1], qty: m[2].replace(/\s+/g, " ") };
     return { name: s, qty: "" };
   }
@@ -590,6 +592,7 @@ window.HP = (function () {
     { id: "holiday", label: "Ferien", emoji: "✈️" },
     { id: "party", label: "Fest", emoji: "🎉" },
     { id: "health", label: "Gesundheit", emoji: "🩺" },
+    { id: "meal", label: "Essen", emoji: "🍽️" },
     { id: "other", label: "Sonstiges", emoji: "✨" }
   ];
   var evT = table(EV_CATS, "other");
@@ -711,6 +714,101 @@ window.HP = (function () {
   function okUrl(u) { return typeof u === "string" && u.length <= 500 && /^https?:\/\/[^\s<>"]+\.[^\s<>"]+$/i.test(u); }
   function dueOf(info, now) { return validDate(info.due) ? dayDiff(now || today(), info.due) : null; }
 
+  /* ---------- Rezepte und Kochideen ---------- */
+  var DISHES = [
+    ["teller", "🍽️", "Teller"], ["pasta", "🍝", "Pasta"], ["pizza", "🍕", "Pizza"], ["curry", "🍛", "Curry"], ["suppe", "🥣", "Suppe"], ["salat", "🥗", "Salat"],
+    ["eintopf", "🍲", "Eintopf"], ["pfanne", "🥘", "Pfanne"], ["reis", "🍚", "Reis"], ["nudeln", "🍜", "Nudelsuppe"], ["burger", "🍔", "Burger"], ["taco", "🌮", "Taco"],
+    ["fladen", "🫓", "Fladenbrot"], ["sandwich", "🥪", "Sandwich"], ["ei", "🍳", "Spiegelei"], ["kartoffel", "🥔", "Kartoffel"], ["kaese", "🧀", "Käse"], ["fondue", "🫕", "Fondue"],
+    ["fleisch", "🥩", "Fleisch"], ["poulet", "🍗", "Poulet"], ["speck", "🥓", "Speck"], ["fisch", "🐟", "Fisch"], ["sushi", "🍣", "Sushi"], ["gemuese", "🥦", "Gemüse"],
+    ["ruebli", "🥕", "Rüebli"], ["peperoni", "🫑", "Peperoni"], ["chili", "🌶️", "Chili"], ["pilz", "🍄", "Pilz"], ["kuerbis", "🎃", "Kürbis"], ["apfel", "🍎", "Apfel"],
+    ["brot", "🍞", "Brot"], ["pancake", "🥞", "Pancakes"], ["waehe", "🥧", "Wähe"], ["kuchen", "🍰", "Kuchen"], ["schoggi", "🍫", "Schoggi"], ["glace", "🍨", "Glace"]
+  ];
+  var DISH = Object.create(null);
+  DISHES.forEach(function (x) { DISH[x[0]] = { id: x[0], ch: x[1], label: x[2] }; });
+  function isDish(id) { return typeof id === "string" && DISH[id] !== undefined; }
+  function dishEmoji(id) { return (isDish(id) ? DISH[id] : DISH.teller).ch; }
+  var RECIPE_CATS = [
+    { id: "main", label: "Hauptgang", emoji: "🍽️" },
+    { id: "soup", label: "Suppe", emoji: "🥣" },
+    { id: "salad", label: "Salat", emoji: "🥗" },
+    { id: "breakfast", label: "Frühstück", emoji: "🥐" },
+    { id: "sweet", label: "Dessert & Backen", emoji: "🍰" },
+    { id: "snack", label: "Apéro & Snack", emoji: "🥨" },
+    { id: "other", label: "Sonstiges", emoji: "✨" }
+  ];
+  var recT = table(RECIPE_CATS, "other");
+  var RECIPE_TAGS = [
+    { id: "vegi", label: "Vegi", emoji: "🥦" },
+    { id: "vegan", label: "Vegan", emoji: "🌱" },
+    { id: "quick", label: "Schnell", emoji: "⚡" },
+    { id: "cheap", label: "Günstig", emoji: "💸" },
+    { id: "kids", label: "Kinderliebling", emoji: "🧒" },
+    { id: "guests", label: "Für Gäste", emoji: "🥂" },
+    { id: "prep", label: "Vorkochen", emoji: "📦" }
+  ];
+  var tagT = table(RECIPE_TAGS, "vegi");
+  /* "Schnell" ist, was so markiert ist oder höchstens eine halbe Stunde dauert; vegan ist auch vegi. */
+  function hasTag(r, tag) {
+    if (tag === "quick") return r.tags.indexOf("quick") >= 0 || (r.time > 0 && r.time <= 30);
+    if (tag === "vegi") return r.tags.indexOf("vegi") >= 0 || r.tags.indexOf("vegan") >= 0;
+    return r.tags.indexOf(tag) >= 0;
+  }
+  /* Grundvorrat, den man fast immer zu Hause hat: wird beim Übertragen auf die Einkaufsliste zuerst abgewählt. */
+  var STAPLE = /^(salz|pfeffer|salz,? pfeffer.*|muskat|zucker|mehl|öl|olivenöl|rapsöl|bratbutter|essig|wasser|oregano|paprikapulver|kreuzkümmel|backpulver|zimt|chilipulver|bouillon|gemüsebouillon)$/i;
+  function isStaple(line) { var n = splitQty(line).name.replace(/\(.*?\)/g, "").replace(/,.*$/, "").trim(); return STAPLE.test(n) || /^salz\b/i.test(n); }
+  /* Eine Zutat auf andere Portionen umrechnen: "200 g Spaghetti" mal 1.5 ergibt "300 g Spaghetti". Was keine Zahl am Anfang hat, bleibt. */
+  var FRAC = { "½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 1 / 3, "⅔": 2 / 3 };
+  function qtyNum(t) {
+    if (FRAC[t] !== undefined) return FRAC[t];
+    var f = /^(\d+)\/(\d+)$/.exec(t);
+    if (f) return +f[2] ? +f[1] / +f[2] : null;
+    var v = Number(t.replace(",", "."));
+    return isFinite(v) ? v : null;
+  }
+  function qtyText(v) {
+    if (v >= 10) return String(Math.round(v));
+    var q = Math.round(v * 4) / 4, whole = Math.floor(q), part = q - whole;
+    if (Math.abs(v - q) < 0.04 && q > 0) return (whole ? String(whole) : "") + (part === 0.25 ? "¼" : part === 0.5 ? "½" : part === 0.75 ? "¾" : "") || "0";
+    return String(Math.round(v * 10) / 10);
+  }
+  function scaleLine(line, factor) {
+    var s = String(line || "");
+    if (!(factor > 0) || Math.abs(factor - 1) < 1e-9) return s;
+    var m = /^(\d+\/\d+|\d+(?:[.,]\d+)?|[½¼¾⅓⅔])(?:\s*([-–])\s*(\d+(?:[.,]\d+)?))?/.exec(s);
+    if (!m) return s;
+    var a = qtyNum(m[1]), rest = s.slice(m[0].length);
+    if (a == null) return s;
+    /* Stückzahlen ohne Einheit ("3 Eier", "2 Zwiebeln") bleiben ab eins ganz. */
+    var whole = !new RegExp("^\\s*" + UNIT + "(?![a-zäöüß])", "i").test(rest);
+    var fmt = function (v) { return whole && v >= 1 ? String(Math.max(1, Math.round(v))) : qtyText(v); };
+    var out = fmt(a * factor);
+    if (m[3]) { var b = qtyNum(m[3]); if (b != null) out += m[2] + fmt(b * factor); }
+    return out + rest;
+  }
+  /* "Was ist im Kühlschrank?": Wörter ab drei Buchstaben, getrennt durch Komma oder Leerschlag. Treffer zählen in Titel,
+     Zutaten und Merkmalen; das Ergebnis nennt, welche Wörter passen. */
+  function searchWords(q) {
+    var seen = Object.create(null);
+    return String(q || "").toLowerCase().split(/[\s,;+]+/).filter(function (w) { return w.length >= 3 && !seen[w] && (seen[w] = 1); }).slice(0, 12);
+  }
+  function recipeMatch(r, words) {
+    if (!words.length) return { score: 1, hits: [] };
+    var hay = (r.title + " " + r.ingr.join(" ") + " " + r.tags.map(function (t) { return tagT.get(t).label; }).join(" ")).toLowerCase(), hits = [];
+    words.forEach(function (w) { if (hay.indexOf(w) >= 0) hits.push(w); });
+    return { score: hits.length, hits: hits };
+  }
+  /* Die eingebauten Kochideen stehen in ideen.js. Sie werden einmal gelesen und wie gespeicherte Rezepte geprüft. */
+  var ideaCache = null;
+  function ideas() {
+    if (!ideaCache) {
+      var raw = Array.isArray(window.HP_IDEEN) ? window.HP_IDEEN : [], seen = Object.create(null);
+      ideaCache = raw.map(function (x) { return x && okId(x.id) && !seen[x.id] && (seen[x.id] = 1) ? normRecipe(x.id, x) : null; }).filter(Boolean);
+      ideaCache.forEach(function (r) { r.idea = true; });
+    }
+    return ideaCache;
+  }
+  function idea(id) { return ideas().filter(function (r) { return r.id === id; })[0] || null; }
+
   /* ---------- Gespeicherte Dokumente lesen ---------- */
   /* Der Speicher ist geteilt: jedes Feld prüfen, bevor damit gerechnet oder es angezeigt wird. Unbrauchbares ergibt null. */
   function text(v, max) { return typeof v === "string" ? v.slice(0, max) : ""; }
@@ -768,6 +866,7 @@ window.HP = (function () {
     if (e.time && validTime(d.endTime) && (e.end || d.endTime > e.time)) e.endTime = d.endTime;
     if (e.repeat !== "none" && validDate(d.until) && d.until >= d.date) e.until = d.until;
     e.skip = e.repeat !== "none" && Array.isArray(d.skip) ? d.skip.filter(validDate).slice(0, 200) : [];
+    e.rid = okId(d.rid) ? d.rid : null;                               // ein Essen im Wochenplan: welches Rezept
     return e;
   }
   function normPlant(id, d) {
@@ -779,6 +878,18 @@ window.HP = (function () {
     return { id: id, name: name, emoji: isPlantEmoji(d.emoji) ? d.emoji : "topf", room: text(d.room, 40).trim(), every: intIn(d.every, 1, 365, 7),
       last: validDate(d.last) ? d.last : "", lastBy: okId(d.lastBy) ? d.lastBy : null, feedEvery: intIn(d.feedEvery, 0, 365, 0), fed: validDate(d.fed) ? d.fed : "",
       who: okId(d.who) ? d.who : null, note: text(d.note, 500), log: log, ts: num0(d.ts), up: num0(d.up) };
+  }
+  function normRecipe(id, d) {
+    if (!d || typeof d !== "object") return null;
+    var title = text(d.title, 80).trim();
+    if (!title) return null;
+    var tags = [];
+    (Array.isArray(d.tags) ? d.tags : []).forEach(function (t) { if (tagT.has(t) && tags.indexOf(t) < 0) tags.push(t); });
+    var lines = function (v, max, len) { return (Array.isArray(v) ? v : []).filter(function (x) { return typeof x === "string"; }).map(function (x) { return x.slice(0, len).trim(); }).filter(Boolean).slice(0, max); };
+    return { id: id, title: title, emoji: isDish(d.emoji) ? d.emoji : "teller", cat: recT.has(d.cat) ? d.cat : "main", tags: tags,
+      time: intIn(d.time, 0, 1440, 0), serves: intIn(d.serves, 1, 50, 4), ingr: lines(d.ingr, 60, 120), steps: lines(d.steps, 40, 600),
+      link: okUrl(d.link) ? d.link : "", note: text(d.note, 2000), fav: d.fav === true, last: validDate(d.last) ? d.last : "", n: intIn(d.n, 0, 100000, 0),
+      by: okId(d.by) ? d.by : null, ts: num0(d.ts), up: num0(d.up) };
   }
   function normInfo(id, d) {
     if (!d || typeof d !== "object") return null;
@@ -806,6 +917,8 @@ window.HP = (function () {
     EV_CATS: EV_CATS, evCat: evT.get, REPEATS: REPEATS, occurrences: occurrences, eventCheck: eventCheck, normEvent: normEvent,
     PLANTS: PLANTS, isPlantEmoji: isPlantEmoji, plantEmoji: plantEmoji, plantDue: plantDue, feedDue: feedDue, careFields: careFields, normPlant: normPlant,
     INFO_CATS: INFO_CATS, infoCat: infoT.get, okUrl: okUrl, dueOf: dueOf, normInfo: normInfo,
+    DISHES: DISHES, isDish: isDish, dishEmoji: dishEmoji, RECIPE_CATS: RECIPE_CATS, recipeCat: recT.get, RECIPE_TAGS: RECIPE_TAGS, recipeTag: tagT.get, hasTag: hasTag,
+    isStaple: isStaple, scaleLine: scaleLine, searchWords: searchWords, recipeMatch: recipeMatch, normRecipe: normRecipe, ideas: ideas, idea: idea,
     okId: okId, hash: hash
   };
 })();

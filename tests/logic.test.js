@@ -178,6 +178,42 @@ test("infos: fields, deadlines and unknown kinds", () => {
   assert.strictEqual(HP.normInfo("i2", { title: " " }), null);
 });
 
+/* ---------- recipes ---------- */
+test("recipes: scaling quantities to other portions", () => {
+  const c = [["200 g Spaghetti", 1.5, "300 g Spaghetti"], ["1/2 TL Salz", 0.5, "¼ TL Salz"], ["½ Bund Petersilie", 2, "1 Bund Petersilie"], ["3 Eier", 1.5, "5 Eier"],
+    ["1 Zwiebel", 0.5, "½ Zwiebel"], ["1-2 Chilischoten", 2, "2-4 Chilischoten"], ["1.5 dl Rahm", 2, "3 dl Rahm"], ["Salz, Pfeffer", 3, "Salz, Pfeffer"], ["125 g Butter", 1.5, "188 g Butter"], ["2 EL Öl", 1, "2 EL Öl"]];
+  c.forEach(([l, f, want]) => assert.strictEqual(HP.scaleLine(l, f), want, l + " x" + f));
+});
+test("recipes: quantities with kitchen units and fractions", () => {
+  eq(HP.splitQty("2 EL Olivenöl"), { name: "Olivenöl", qty: "2 EL" });
+  eq(HP.splitQty("1/2 TL Zimt"), { name: "Zimt", qty: "1/2 TL" });
+  eq(HP.splitQty("½ Bund Schnittlauch"), { name: "Schnittlauch", qty: "½ Bund" });
+  eq(HP.splitQty("1 Dose gehackte Tomaten (400 g)"), { name: "gehackte Tomaten (400 g)", qty: "1 Dose" });
+  eq(HP.splitQty("2 Knoblauchzehen"), { name: "Knoblauchzehen", qty: "2" });
+  ["Salz, Pfeffer, Muskat", "2 EL Olivenöl", "3 EL Bratbutter", "1 l Gemüsebouillon, heiss", "1 Prise Salz"].forEach(l => assert.ok(HP.isStaple(l), l));
+  ["200 g Spaghetti", "Petersilie, Salz, Pfeffer", "1 Zwiebel", "2 dl Rahm"].forEach(l => assert.ok(!HP.isStaple(l), l));
+});
+test("recipes: normRecipe drops what does not belong", () => {
+  const r = HP.normRecipe("r1", { title: " Suppe ", emoji: "constructor", cat: "x", tags: ["vegi", "vegi", "toString", "quick"], time: -5, serves: 0, ingr: ["  2 Rüebli ", 3, ""], steps: "nope", link: "javascript:alert(1)", fav: "yes" });
+  assert.strictEqual(r.title, "Suppe"); assert.strictEqual(r.emoji, "teller"); assert.strictEqual(r.cat, "main");
+  eq(r.tags, ["vegi", "quick"]); assert.strictEqual(r.time, 0); assert.strictEqual(r.serves, 4); eq(r.ingr, ["2 Rüebli"]); eq(r.steps, []);
+  assert.strictEqual(r.link, ""); assert.strictEqual(r.fav, false);
+  assert.strictEqual(HP.normRecipe("r2", { title: "" }), null);
+  assert.ok(HP.hasTag(HP.normRecipe("r3", { title: "x", time: 20 }), "quick"));
+  assert.ok(HP.hasTag(HP.normRecipe("r4", { title: "x", tags: ["vegan"] }), "vegi"));
+});
+test("recipes: search by what is in the fridge", () => {
+  const r = HP.normRecipe("r1", { title: "Ofengemüse", ingr: ["1 Zucchetti", "200 g Feta"], tags: ["vegi"] });
+  eq(HP.searchWords("Zucchetti, feta  zu"), ["zucchetti", "feta"]);
+  eq(HP.recipeMatch(r, ["zucchetti", "feta", "lachs"]), { score: 2, hits: ["zucchetti", "feta"] });
+  assert.strictEqual(HP.recipeMatch(r, ["vegi"]).score, 1);
+});
+test("recipes: a meal in the calendar remembers its recipe", () => {
+  const e = HP.normEvent("e1", { title: "Risotto", date: "2026-10-12", cat: "meal", rid: "idee-pilzrisotto" });
+  assert.strictEqual(e.cat, "meal"); assert.strictEqual(e.rid, "idee-pilzrisotto");
+  assert.strictEqual(HP.normEvent("e2", { title: "x", date: "2026-10-12", rid: "__proto__" }).rid, null);
+});
+
 /* ---------- reading shared documents ---------- */
 test("tampered documents never reach the arithmetic", () => {
   assert.strictEqual(HP.normHome("x", { name: "a", base: "chf" }), null);
@@ -187,6 +223,23 @@ test("tampered documents never reach the arithmetic", () => {
   assert.strictEqual(HP.normExpense("x", { amount: 5, cur: "CHF", payer: "__proto__" }), null);
   const e = HP.normExpense("x", { amount: 500, cur: "CHF", payer: "a", mode: "shares", weights: { a: 1, toString: 2, b: -1, c: Infinity } });
   eq(e.weights, { a: 1 });
+});
+
+/* ---------- the built-in ideas ---------- */
+test("cooking ideas: every idea is complete and valid", () => {
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "ideen.js"), "utf8"), sandbox);
+  const raw = sandbox.window.HP_IDEEN, ideas = HP.ideas();
+  assert.ok(raw.length >= 20, "at least 20 ideas");
+  assert.strictEqual(ideas.length, raw.length, "every idea passes normRecipe and its id is unique");
+  raw.forEach(x => {
+    assert.ok(HP.isDish(x.emoji), x.id + ": emoji " + x.emoji);
+    assert.ok(HP.RECIPE_CATS.some(c => c.id === x.cat), x.id + ": cat");
+    x.tags.forEach(t => assert.ok(HP.RECIPE_TAGS.some(g => g.id === t), x.id + ": tag " + t));
+    assert.ok(x.ingr.length >= 3 && x.steps.length >= 2 && x.time > 0, x.id + ": ingredients, steps and time");
+    assert.ok(/^idee-[a-z0-9-]+$/.test(x.id), x.id);
+  });
+  assert.ok(ideas.every(r => r.idea === true));
+  assert.strictEqual(HP.idea("idee-roesti").title, "Rösti mit Spiegelei");
 });
 
 console.log((failed ? "✗ " + failed + " failed, " : "✓ ") + n + " passed");

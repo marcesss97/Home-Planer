@@ -331,11 +331,69 @@ step("Haushalt löschen", async () => {
   await sees(A, "Eure Haushalte");
   assert.strictEqual(await A.locator(".trip").count(), 1);
 });
+step("Rezepte: Kochidee, Portionen, Einkaufsliste, übernehmen, einplanen, Kühlschrank-Suche", async () => {
+  await A.click(".trip");                                               // the original household; its copy was deleted above
+  await sees(A, "Heute");
+  await tab(A, "recipes");
+  const first = await A.locator(".idea-t").innerText();
+  await A.click("text=Andere Idee");
+  await A.waitForFunction(t => document.querySelector(".idea-t") && document.querySelector(".idea-t").textContent !== t, first);
+  await A.fill("#hp-rc-q", "shakshuka");
+  await A.click('.x:has-text("Shakshuka")');
+  await sees(A, "2 Portionen");
+  await A.click('[aria-label="Eine Portion mehr"]'); await A.click('[aria-label="Eine Portion mehr"]');
+  await sees(A, "8 Eier");
+  assert.ok(!(await A.locator('.row.ingr:has-text("Olivenöl") input').isChecked()), "staples start unticked");
+  await A.click('.row.ingr:has-text("Brot") input');
+  await A.click('.sheet .btn.primary:has-text("Einkaufsliste")');
+  await toast(A, /Zutaten auf der Einkaufsliste/);
+  await A.click('.sheet-head .btn.primary:has-text("Übernehmen")');
+  await toast(A, /ist jetzt in euren Rezepten/);
+  await A.locator('.sheet-head:has-text("Bearbeiten")').waitFor();
+  await A.click(".sheet .foot >> text=Einplanen");
+  const tomorrow = await A.evaluate(t => window.HP.addDays(t, 1), today);
+  await A.fill("#hp-ml-date", tomorrow);
+  await A.click(".sheet .foot >> text=Einplanen");
+  await toast(A, /Eingeplant: Shakshuka/);
+  await noSheet(A);
+  await A.fill("#hp-rc-q", "");
+  await A.locator('.week-row:has-text("Morgen") .meal:has-text("Shakshuka")').waitFor();
+  await A.fill("#hp-rc-q", "zucchetti, feta");
+  await A.locator('.x:has-text("Ofengemüse mit Feta")', { hasText: "passt: zucchetti, feta" }).waitFor();
+  await A.fill("#hp-rc-q", "");
+  await A.click(".fab");
+  await A.fill("#hp-rc-title", "Omas Gemüsesuppe");
+  await A.fill("#hp-rc-ingr", "- 2 Rüebli\n1 Stange Lauch\n500 g Kartoffeln\nSalz, Pfeffer");
+  await A.fill("#hp-rc-steps", "1. Gemüse schneiden\n2. Weich kochen\n3. Pürieren");
+  await A.fill("#hp-rc-link", "javascript:alert(1)");
+  await save(A);
+  await A.locator(".sheet-err", { hasText: "keine vollständige Adresse" }).waitFor();
+  await A.fill("#hp-rc-link", "https://example.ch/suppe");
+  await save(A);
+  await A.locator('.sheet-head:has-text("Omas Gemüsesuppe")').waitFor();
+  assert.strictEqual(await A.locator(".sheet .steps li").count(), 3);
+  assert.match(await A.locator(".sheet .row.ingr").first().innerText(), /^2 Rüebli$/);
+  await A.click("text=Heute gekocht?");
+  await toast(A, /En Guete/);
+  await A.click('.sheet button:has-text("Als Favorit")');
+  await A.locator('.sheet button:has-text("Favorit")[aria-pressed="true"]').waitFor();
+  await A.click(".sheet-head >> text=Fertig"); await noSheet(A);
+  await A.locator('.x:has-text("Omas Gemüsesuppe")', { hasText: "zuletzt gekocht heute" }).waitFor();
+  await tab(A, "shop");
+  assert.match(await A.locator(".sh", { hasText: "Eier" }).innerText(), /8/);
+  assert.strictEqual(await A.locator(".sh-t", { hasText: "Brot" }).count(), 0, "unticked ingredients stay off the list");
+  await tab(A, "cal");
+  await A.locator('section.stack:has-text("Demnächst") .x:has-text("Shakshuka")', { hasText: "Marc kocht" }).waitFor();
+  await A.click('section.stack:has-text("Demnächst") .x:has-text("Shakshuka")');
+  await sees(A, "Eingeplant:");
+  await A.click("text=Aus dem Plan");
+  await toast(A, /Aus dem Wochenplan genommen/);
+});
 step("Schmales Handy (320 px): kein seitliches Scrollen", async () => {
   const N = await device({ width: 320 });
   await N.goto(BASE);
   await createHome(N, "Familie Muster-Bühlmann", ["Marc", "Lea"]);
-  for (const t of ["home", "kasse", "shop", "cal", "plants", "infos"]) {
+  for (const t of ["home", "kasse", "shop", "recipes", "cal", "plants", "infos"]) {
     await tab(N, t);
     const [sw, iw] = await N.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
     assert.ok(sw <= iw, "tab " + t + " is wider than the screen: " + sw);
@@ -381,6 +439,15 @@ step("Gruppen-Sync: Einkaufsliste und Pflanzen erscheinen auf dem anderen Handy"
   await C1.click('[aria-label="Ficus giessen"]');
   await C2.locator('[aria-label="Ficus ist heute gegossen"]').waitFor();
   assert.strictEqual(docsUnder(hid).filter(k => k.indexOf("/plants/") > 0).length, 1);
+  await tab(C2, "recipes");
+  await C2.fill("#hp-rc-q", "raclette");
+  await C2.click('.x:has-text("Raclette")');
+  await C2.click('.sheet-head .btn.primary:has-text("Übernehmen")');
+  await toast(C2, /ist jetzt in euren Rezepten/);
+  await C2.click(".sheet-head >> text=Fertig"); await noSheet(C2);
+  await tab(C1, "recipes");
+  await C1.locator('.x:has-text("Raclette")', { hasText: "Portionen" }).waitFor();
+  assert.strictEqual(docsUnder(hid).filter(k => k.indexOf("/recipes/") > 0).length, 1);
 });
 step("Gruppen-Sync: gleichzeitige Änderungen an Personen gehen nicht verloren", async () => {
   await Promise.all([
